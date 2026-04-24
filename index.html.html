@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+DANIELS HOME CENTER — CREDIT PRE-SCREEN TOOL
+Release Notes v3.0 | April 2026
+================================================================================
+
+ABOUT THIS TOOL
+This is a pre-screening / prequalification simulator built on the Daniels
+Hybrid Credit Model. It is NOT the Infinity approval system. It runs in
+parallel with the same risk logic to give approvers a fast, structured
+indication of the most likely financing path for a given customer and deal.
+
+--------------------------------------------------------------------------------
+1. FINAL DECISION PATH LABELS
+--------------------------------------------------------------------------------
+
+All output labels use probability language, not approval language.
+No label implies a final credit decision has been made.
+
+  LIKELY IN-HOUSE — Streamlined
+    Profile meets all fast-track conditions: FICO 660+, verified income,
+    safe product, small deal. Lowest friction path. High confidence.
+
+  LIKELY IN-HOUSE
+    Full evaluation passed. All risk criteria met for in-house financing.
+    Customer should proceed to formal application.
+
+  LIKELY IN-HOUSE — With Adjustments
+    In-house is viable but requires a specific structure: a higher down
+    payment and/or a shorter term. The simulator calculates and displays
+    the exact adjusted figures needed.
+
+  LIKELY SPLIT TENDER
+    In-house cannot absorb the full amount alone. Recommended structure:
+    Daniels finances its safe portion (capped by tier), a partner
+    (Synchrony/WF for FICO 600+, SNAP/Acima for FICO <600) covers the rest.
+
+  LIKELY EXTERNAL — [Partner Name]
+    Profile does not qualify for in-house financing under current conditions.
+    Routed to the appropriate external partner based on FICO band.
+    FICO 600+: Synchrony / WF. FICO <600: SNAP / Lease-to-Own.
+
+  NOT VIABLE — [Reason]
+    Hard stop triggered (prior default, fraud flag, no income) OR FICO below
+    550 (19.6–27.8% confirmed default rate). No in-house path available.
+    SNAP/Acima is the only option if FICO is 550–599 and hard stops are clear.
+
+--------------------------------------------------------------------------------
+2. THE $1,200 THRESHOLD IN PRE-SCREEN CONTEXT
+--------------------------------------------------------------------------------
+
+The $1,200 figure appears in the engine in two places only:
+
+  a) STREAMLINED PATH SIGNAL (sale price <= $1,200)
+     When the total sale price is at or below $1,200 AND all other fast-track
+     conditions are met (FICO 660+, verified income, safe product), the engine
+     labels the deal as "Streamlined." This is a speed signal, not a gate.
+     A deal above $1,200 proceeds to full evaluation — it is not penalized.
+
+  b) DEAL CONTEXT FLAG (financed amount < $1,200 after DP)
+     Stored internally as `smallDeal = true/false`. Used only to add a
+     contextual note in the evaluation breakdown ("Small deal — streamlined
+     path likely"). It changes no logic, blocks no path, and triggers no
+     routing. It is invisible to the output unless the full breakdown is open.
+
+  WHAT $1,200 DOES NOT DO:
+  - It does not block deals above $1,200 from any path.
+  - It does not create a separate approval tier.
+  - It does not override hard risk rules.
+  All FICO gates, product restrictions, and fraud/default stops apply
+  to every deal regardless of size.
+
+--------------------------------------------------------------------------------
+3. PRE-SCREENING VS FORMAL APPROVAL — KEY DISTINCTIONS
+--------------------------------------------------------------------------------
+
+  PRE-SCREEN (this tool)              FORMAL APPROVAL (Infinity)
+  ─────────────────────────────────   ─────────────────────────────────
+  Probability-based output            Binding credit decision
+  "Likely in-house"                   "Approved / Declined"
+  No hard inquiry pulled              Credit inquiry triggered
+  Fast — runs on approver inputs      Full application + documents
+  Used before formal application      Final step before contract
+  Guides the sales conversation       Determines contract terms
+  No document collection required    ID + utility bill + pay stub required
+  No DP collected at this stage       DP collected before contract signing
+  Output = recommended path           Output = approved terms or decline
+  Runs same risk logic (calibrated)   Infinity enforces exact thresholds
+
+  IMPORTANT: A favorable pre-screen result is not a commitment to approve.
+  Final approval is subject to formal application, document verification,
+  and Infinity system decision. This tool helps structure the conversation
+  and identify the most likely path before a customer commits to applying.
+
+================================================================================
+File: Daniels_Credit_Simulator_v3.html
+Model: Daniels Hybrid Credit Model v3.0
+Portfolio basis: 2,832 accounts | $4.09M | validated 03/24/2026
+Built: April 2026 | For internal use only
+================================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daniels Home Center — Credit Pre-Screen Tool v3.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:    #0F1923;
+  --navy:   #1A3A5C;
+  --steel:  #2B6CB0;
+  --sky:    #4299E1;
+  --ice:    #EBF4FF;
+  --white:  #FFFFFF;
+  --off:    #F8F7F4;
+  --muted:  #EAE8E2;
+  --border: #D6D3CB;
+  --sub:    #6B7280;
+  --green:  #166534;
+  --gb:     #DCFCE7;
+  --gm:     #22C55E;
+  --yellow: #92400E;
+  --yb:     #FEF3C7;
+  --ym:     #F59E0B;
+  --orange: #9A3412;
+  --ob:     #FFEDD5;
+  --om:     #F97316;
+  --red:    #991B1B;
+  --rb:     #FEE2E2;
+  --rm:     #EF4444;
+  --purple: #5B21B6;
+  --pb:     #EDE9FE;
+  --pm:     #8B5CF6;
+  --teal:   #0D4A4A;
+  --tb:     #CCFBF1;
+  --r:      12px;
+  --sh:     0 1px 12px rgba(15,25,35,.08);
+  --shm:    0 4px 28px rgba(15,25,35,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Sora',sans-serif;background:#E8EDF4;color:var(--ink);min-height:100vh;font-size:14px}
+
+/* ─── TOPBAR ─── */
+.top{background:var(--navy);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(0,0,0,.25)}
+.top-l{display:flex;align-items:center;gap:12px}
+.top-mark{width:32px;height:32px;background:var(--steel);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:12px;letter-spacing:.5px}
+.top-name{font-size:14px;font-weight:700;color:#fff}
+.top-ver{font-size:10px;color:rgba(255,255,255,.45);margin-top:1px;font-weight:400}
+.top-pill{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.65);font-size:10px;padding:3px 10px;border-radius:20px;font-weight:600;letter-spacing:.4px}
+
+/* ─── LAYOUT ─── */
+.wrap{max-width:1140px;margin:0 auto;padding:22px 16px 72px;display:grid;grid-template-columns:380px 1fr;gap:18px;align-items:start}
+
+/* ─── PANEL ─── */
+.panel{background:#fff;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.ph{background:var(--navy);padding:13px 20px;display:flex;align-items:center;gap:8px}
+.ph-ico{width:24px;height:24px;background:rgba(255,255,255,.12);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px}
+.ph h2{font-size:12px;font-weight:700;color:#fff;letter-spacing:.4px;text-transform:uppercase}
+.pb{padding:20px}
+
+/* ─── FIELDS ─── */
+.f{margin-bottom:14px}
+.f:last-child{margin-bottom:0}
+.f label{display:block;font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.7px;text-transform:uppercase;margin-bottom:5px}
+.f label .req{color:var(--sky)}
+.f input[type=number]{width:100%;height:44px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-family:'Sora',sans-serif;font-size:14px;font-weight:500;color:var(--ink);background:var(--off);outline:none;transition:.2s}
+.f input[type=number]:focus{border-color:var(--steel);background:#fff;box-shadow:0 0 0 3px rgba(43,108,176,.1)}
+.f select{width:100%;height:44px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-family:'Sora',sans-serif;font-size:14px;font-weight:500;color:var(--ink);background:var(--off) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;appearance:none;outline:none;cursor:pointer;transition:.2s}
+.f select:focus{border-color:var(--steel);background-color:#fff}
+
+/* ─── TOGGLES ─── */
+.tg-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tg{height:40px;border:1.5px solid var(--border);border-radius:7px;background:var(--off);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:4px;user-select:none}
+.tg:hover{border-color:var(--steel);color:var(--steel)}
+.tg.yes{background:var(--gb);border-color:var(--gm);color:var(--green)}
+.tg.no{background:var(--rb);border-color:var(--rm);color:var(--red)}
+
+/* ─── SLIDER ─── */
+.sl-wrap{position:relative;padding-top:26px}
+.sl-num{position:absolute;right:0;top:0;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--navy);transition:color .2s}
+.sl-num.warn{color:var(--orange)}
+.sl-num.danger{color:var(--red)}
+.sl-num.good{color:var(--green)}
+input[type=range]{width:100%;height:4px;border-radius:2px;background:var(--muted);outline:none;cursor:pointer;appearance:none;border:none;margin:4px 0}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:var(--steel);border:2.5px solid #fff;box-shadow:0 1px 6px rgba(43,108,176,.4);cursor:pointer;transition:transform .15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--steel);border:2.5px solid #fff;cursor:pointer}
+.sl-labs{display:flex;justify-content:space-between;font-size:9px;color:var(--sub);margin-top:2px;letter-spacing:.3px}
+
+/* ─── SECTION DIV ─── */
+.sec{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--steel);padding:12px 0 8px;border-top:1px solid var(--muted);margin-top:2px}
+.sec:first-child{border-top:none;padding-top:0}
+
+/* ─── EDGE CASE BADGE ─── */
+.edge-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;margin-top:5px}
+.eb-thin{background:var(--yb);color:var(--yellow)}
+.eb-tenure{background:var(--tb);color:var(--teal)}
+.eb-self{background:var(--ob);color:var(--orange)}
+.eb-highdp{background:var(--pb);color:var(--purple)}
+
+/* ─── TERM CHIPS ─── */
+.term-chip{height:28px;padding:0 10px;border:1.5px solid var(--border);border-radius:6px;background:var(--off);font-family:'Sora',sans-serif;font-size:11px;font-weight:600;color:var(--sub);cursor:pointer;transition:.15s;white-space:nowrap}
+.term-chip:hover{border-color:var(--steel);color:var(--steel)}
+.term-chip.active{background:var(--ice);border-color:var(--steel);color:var(--navy)}
+
+/* ─── DP HINT ─── */
+.dp-h{font-size:11px;color:var(--steel);margin-top:4px;font-weight:500;min-height:16px;transition:color .2s}
+
+/* ─── CTA ─── */
+.cta{width:100%;height:50px;background:linear-gradient(135deg,var(--navy),var(--steel));border:none;border-radius:9px;color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;letter-spacing:.2px;cursor:pointer;margin-top:18px;transition:.2s;box-shadow:0 3px 14px rgba(26,58,92,.26);display:flex;align-items:center;justify-content:center;gap:7px}
+.cta:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(26,58,92,.35)}
+.cta:active{transform:none}
+.rst{width:100%;display:block;text-align:center;margin-top:9px;font-size:11px;color:var(--sub);cursor:pointer;background:none;border:none;font-family:'Sora',sans-serif;text-decoration:underline;padding:5px}
+
+/* ─── RIGHT COLUMN ─── */
+.rcol{display:flex;flex-direction:column;gap:14px}
+
+/* ─── DECISION BANNER ─── */
+.db{border-radius:var(--r);padding:24px 24px 20px;box-shadow:var(--shm);position:relative;overflow:hidden}
+.db::before{content:'';position:absolute;top:0;left:0;right:0;height:4px}
+.db.neutral{background:var(--muted)}.db.neutral::before{background:var(--border)}
+.db.approved{background:var(--gb)}.db.approved::before{background:var(--gm)}
+.db.split{background:var(--pb)}.db.split::before{background:var(--pm)}
+.db.adjust{background:var(--yb)}.db.adjust::before{background:var(--ym)}
+.db.external{background:var(--ob)}.db.external::before{background:var(--om)}
+.db.declined{background:var(--rb)}.db.declined::before{background:var(--rm)}
+.db-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.8px;opacity:.55;margin-bottom:5px}
+.db-main{font-size:28px;font-weight:800;line-height:1.05;margin-bottom:4px;letter-spacing:-.3px}
+.db.neutral .db-main{color:var(--sub)}
+.db.approved .db-main{color:var(--green)}
+.db.split .db-main{color:var(--purple)}
+.db.adjust .db-main{color:var(--yellow)}
+.db.external .db-main{color:var(--orange)}
+.db.declined .db-main{color:var(--red)}
+.db-sub{font-size:12px;opacity:.65;margin-top:2px}
+
+/* ─── SALES SCRIPT CARD ─── */
+.script-card{border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.script-hdr{padding:12px 18px;display:flex;align-items:center;gap:7px}
+.script-hdr.approved{background:linear-gradient(135deg,#166534,#22C55E)}
+.script-hdr.split{background:linear-gradient(135deg,#5B21B6,#8B5CF6)}
+.script-hdr.adjust{background:linear-gradient(135deg,#92400E,#F59E0B)}
+.script-hdr.external{background:linear-gradient(135deg,#9A3412,#F97316)}
+.script-hdr.declined{background:linear-gradient(135deg,#7F1D1D,#EF4444)}
+.script-hdr.neutral{background:var(--muted)}
+.script-hdr h3{font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.6px}
+.script-body{background:#fff;padding:16px 18px}
+.script-quote{font-size:15px;font-weight:600;color:var(--ink);line-height:1.5;font-style:italic;border-left:3px solid var(--gm);padding-left:14px;margin-bottom:10px}
+.script-quote.split{border-color:var(--pm)}
+.script-quote.adjust{border-color:var(--ym)}
+.script-quote.external{border-color:var(--om)}
+.script-quote.declined{border-color:var(--rm)}
+.script-steps{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.script-step{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;background:var(--off);border-radius:7px}
+.sc-dot{width:20px;height:20px;border-radius:5px;background:var(--navy);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sc-txt{font-size:12px;font-weight:500;color:var(--ink);line-height:1.4}
+.sc-txt strong{color:var(--navy)}
+
+/* ─── EDGE CASE CARD ─── */
+.ec-card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.ec-hdr{background:var(--off);padding:11px 18px;border-bottom:1px solid var(--muted);display:flex;align-items:center;gap:6px}
+.ec-hdr h3{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
+.ec-body{padding:12px 18px}
+.ec-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--muted)}
+.ec-row:last-child{border-bottom:none;padding-bottom:0}
+.ec-ico{font-size:16px;flex-shrink:0;margin-top:1px}
+.ec-name{font-size:11px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.ec-rule{font-size:11px;color:var(--sub);line-height:1.4}
+.ec-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:.3px;margin-left:5px}
+.ep-flex{background:var(--gb);color:var(--green)}
+.ep-strict{background:var(--rb);color:var(--red)}
+.ep-guide{background:var(--yb);color:var(--yellow)}
+
+/* ─── METRICS ─── */
+.mg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.mg2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mc{background:#fff;border-radius:9px;padding:13px 13px 11px;box-shadow:var(--sh);border:1px solid var(--border)}
+.mc.hl{background:var(--navy);border-color:transparent}
+.mc-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--sub);margin-bottom:4px}
+.mc.hl .mc-lbl{color:rgba(255,255,255,.5)}
+.mc-val{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:600;color:var(--navy);line-height:1}
+.mc.hl .mc-val{color:#fff}
+.mc-sub{font-size:10px;color:var(--sub);margin-top:3px}
+.mc.hl .mc-sub{color:rgba(255,255,255,.4)}
+.mc.warn{border-color:var(--rm);background:var(--rb)}
+.mc.warn .mc-val{color:var(--red)}
+
+/* ─── OPTIONS ─── */
+.og{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.oc{border-radius:9px;padding:13px 12px;border:1.5px solid transparent;position:relative}
+.oc-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;opacity:.65}
+.oc-title{font-size:13px;font-weight:700;margin-bottom:3px}
+.oc-det{font-size:11px;line-height:1.4;opacity:.8}
+.oc-badge{position:absolute;top:-7px;right:8px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.3px;color:#fff}
+.oc.oa{background:var(--gb);border-color:#86EFAC;color:var(--green)}.oc.oa .oc-badge{background:var(--green)}
+.oc.ob{background:var(--pb);border-color:#C4B5FD;color:var(--purple)}.oc.ob .oc-badge{background:var(--purple)}
+.oc.oc2{background:var(--ob);border-color:#FED7AA;color:var(--orange)}.oc.oc2 .oc-badge{background:var(--orange)}
+.oc.od{background:var(--rb);border-color:#FCA5A5;color:var(--red);opacity:.55}.oc.od .oc-badge{background:var(--red)}
+
+/* ─── SALVAGE ─── */
+.sv-card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.sv-hdr{padding:12px 18px;display:flex;align-items:center;gap:7px}
+.sv-hdr.green{background:linear-gradient(135deg,#14532D,#16A34A)}
+.sv-hdr.purple{background:linear-gradient(135deg,#4C1D95,#7C3AED)}
+.sv-hdr h3{font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.5px}
+.sv-body{padding:14px 18px}
+.sv-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--muted)}
+.sv-row:last-child{border-bottom:none;padding-bottom:0}
+.sv-n{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.sv-n.g{background:var(--gb);color:var(--green)}
+.sv-n.p{background:var(--pb);color:var(--purple)}
+.sv-title{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.sv-det{font-size:11px;color:var(--sub);line-height:1.4}
+
+/* ─── GUARDRAIL ALERT ─── */
+.gr-alert{background:var(--yb);border:1px solid var(--ym);border-radius:8px;padding:11px 14px;display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.gr-ico{font-size:16px;flex-shrink:0}
+.gr-txt{font-size:11px;color:var(--yellow);line-height:1.45;font-weight:500}
+.gr-txt strong{color:#7C2D12}
+
+/* ─── WATERFALL ─── */
+.wf{background:#fff;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.wf-hdr{background:var(--off);padding:11px 18px;border-bottom:1px solid var(--muted);display:flex;align-items:center;gap:6px}
+.wf-hdr h3{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
+.ws{display:flex;align-items:flex-start;gap:10px;padding:11px 18px;border-bottom:1px solid var(--muted);transition:background .1s}
+.ws:last-child{border-bottom:none}
+.ws:hover{background:var(--off)}
+.sb{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.sb.pass{background:var(--gb);color:var(--green)}
+.sb.fail{background:var(--rb);color:var(--red)}
+.sb.warn{background:var(--yb);color:var(--yellow)}
+.sb.skip{background:var(--muted);color:var(--sub)}
+.sb.info{background:var(--ice);color:var(--steel)}
+.sb.sv{background:var(--pb);color:var(--purple)}
+.sb.ec{background:var(--tb);color:var(--teal)}
+.wn{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--sub);margin-bottom:1px}
+.wd{font-size:12px;font-weight:600;color:var(--ink);line-height:1.3}
+.wnt{font-size:11px;color:var(--sub);margin-top:2px;line-height:1.35}
+
+/* ─── SHORTFALL ─── */
+.sf{background:#fff;border-radius:var(--r);border-left:3px solid var(--rm);box-shadow:var(--sh);padding:12px 16px;display:flex;align-items:center;gap:11px}
+.sf-t{font-size:10px;font-weight:700;color:var(--red);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+.sf-b{font-size:13px;font-weight:600;color:var(--ink)}
+.sf-n{font-size:11px;color:var(--sub);margin-top:2px;font-style:italic}
+
+/* ─── IDLE ─── */
+.idle{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:52px 24px;text-align:center;gap:9px}
+.idle-ico{width:56px;height:56px;background:var(--muted);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:3px}
+.idle-t{font-size:16px;font-weight:700;color:var(--navy)}
+.idle-s{font-size:12px;color:var(--sub);line-height:1.5;max-width:250px}
+
+/* ─── CHIP ─── */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;margin-top:4px}
+.c-ih{background:var(--gb);color:var(--green)}
+.c-ex{background:var(--ob);color:var(--orange)}
+.c-snap{background:var(--rb);color:var(--red)}
+.c-split{background:var(--pb);color:var(--purple)}
+
+/* ─── FOOTER ─── */
+.foot{grid-column:1/-1;text-align:center;font-size:10px;color:var(--sub);padding:8px;opacity:.6;font-weight:400}
+
+/* ─── ANIMATION ─── */
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ani{animation:up .25s ease forwards}
+.ani2{animation:up .3s ease .06s both}
+.ani3{animation:up .3s ease .12s both}
+.ani4{animation:up .3s ease .18s both}
+.ani5{animation:up .3s ease .24s both}
+
+@media(max-width:840px){.wrap{grid-template-columns:1fr}.mg{grid-template-columns:1fr 1fr}.og{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="top-l">
+    <div class="top-mark">DHC</div>
+    <div>
+      <div class="top-name">Daniels Home Center</div>
+      <div class="top-ver">Prequalification Simulator v3.0 — Hybrid Model</div>
+    </div>
+  </div>
+  <div class="top-pill">Internal Use Only</div>
+</div>
+
+<div class="wrap">
+
+  <!-- ════════ LEFT — INPUT ════════ -->
+  <div class="panel">
+    <div class="ph"><div class="ph-ico">📋</div><h2>Customer &amp; Deal</h2></div>
+    <div class="pb">
+
+      <div class="sec">Customer Profile</div>
+
+      <div class="f">
+        <label>FICO Score <span class="req">*</span></label>
+        <div class="sl-wrap">
+          <span class="sl-num" id="fv">640</span>
+          <input type="range" id="fico" min="400" max="850" value="640" step="1" oninput="sf()">
+          <div class="sl-labs"><span>400</span><span>500</span><span>550</span><span>600</span><span>650</span><span>700</span><span>850</span></div>
+        </div>
+      </div>
+
+      <div class="f">
+        <label>Monthly Income ($) <span class="req">*</span></label>
+        <input type="number" id="income" value="3200" min="0" step="100">
+      </div>
+
+      <div class="f">
+        <label>Income Verified? <span class="req">*</span></label>
+        <div class="tg-row">
+          <button class="tg yes" id="vy" onclick="tog('ver',true)">✓ Pay stub / W2</button>
+          <button class="tg" id="vn" onclick="tog('ver',false)">✗ Self-declared</button>
+        </div>
+      </div>
+
+      <div class="f">
+        <label>Employment Type</label>
+        <select id="emptype" onchange="updateEdge()">
+          <option value="employed">W2 Employed</option>
+          <option value="selfemployed">Self-Employed / 1099</option>
+          <option value="retired">Retired / SSI / Benefits</option>
+          <option value="none">Unemployed / Other</option>
+        </select>
+      </div>
+
+      <div class="f">
+        <label>Loyalty / Tenure at Daniels</label>
+        <select id="tenure">
+          <option value="0">New — 0 to 5 months</option>
+          <option value="9">6 to 11 months</option>
+          <option value="18" selected>12 to 23 months</option>
+          <option value="30">24 months or more</option>
+        </select>
+      </div>
+
+      <div class="f">
+        <label>Credit History (Trade Lines)</label>
+        <select id="tradelines">
+          <option value="strong">Strong — multiple open accounts, no issues</option>
+          <option value="moderate" selected>Moderate — some accounts, minor lates</option>
+          <option value="weak">Weak — very few accounts</option>
+          <option value="thin">Thin File — little or no credit history</option>
+        </select>
+      </div>
+
+      <div class="sec">Deal Details</div>
+
+      <div class="f">
+        <label>Product Category <span class="req">*</span></label>
+        <select id="product" onchange="onProd()">
+          <option value="furniture">Furniture</option>
+          <option value="mattress">Mattress</option>
+          <option value="accessories">Accessories</option>
+          <option value="appliances">Appliances</option>
+          <option value="electronics">Electronics / TV / Laptop</option>
+          <option value="seasonal">Seasonal (A/C, Heater)</option>
+          <option value="iphone">iPhone / Apple Device</option>
+        </select>
+      </div>
+
+      <div class="f">
+        <label>Purchase Price ($) <span class="req">*</span></label>
+        <input type="number" id="purchase" value="1800" min="0" step="50" oninput="updDP()">
+      </div>
+
+      <div class="f">
+        <label>Tax Rate (%)</label>
+        <input type="number" id="tax" value="8.0" min="0" max="15" step="0.25" oninput="updDP()">
+      </div>
+
+      <div class="f">
+        <label>Down Payment Customer Has ($)</label>
+        <div class="sl-wrap">
+          <span class="sl-num" id="dpv">$300</span>
+          <input type="range" id="dpsl" min="0" max="3000" value="300" step="25" oninput="syncDP()">
+          <div class="sl-labs"><span>$0</span><span>$500</span><span>$1K</span><span>$2K</span><span>$3K+</span></div>
+        </div>
+        <div class="dp-h" id="dph">Adjust slider or enter below</div>
+        <input type="number" id="dpman" placeholder="Type exact amount" min="0" step="25" style="margin-top:7px" oninput="manDP()">
+      </div>
+
+      <div class="f">
+        <label>Requested Term (months)</label>
+        <div class="sl-wrap">
+          <span class="sl-num" id="tv">18 mo</span>
+          <input type="range" id="term" min="1" max="36" value="18" step="1" oninput="syncTerm()">
+          <div class="sl-labs"><span>1</span><span>6</span><span>12</span><span>18</span><span>24</span><span>30</span><span>36</span></div>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px" id="term-chips">
+          <button class="term-chip" onclick="setTerm(3)">3 mo</button>
+          <button class="term-chip" onclick="setTerm(6)">6 mo</button>
+          <button class="term-chip" onclick="setTerm(9)">9 mo</button>
+          <button class="term-chip" onclick="setTerm(12)">12 mo</button>
+          <button class="term-chip" onclick="setTerm(15)">15 mo</button>
+          <button class="term-chip active" onclick="setTerm(18)">18 mo</button>
+          <button class="term-chip" onclick="setTerm(21)">21 mo</button>
+          <button class="term-chip" onclick="setTerm(24)">24 mo</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+          <span style="font-size:11px;color:var(--sub);white-space:nowrap;font-weight:600">Custom:</span>
+          <input type="number" id="term-manual" placeholder="e.g. 10" min="1" max="60" step="1"
+            style="width:90px;height:36px;border:1.5px solid var(--border);border-radius:7px;padding:0 10px;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;color:var(--navy);background:var(--off);outline:none"
+            oninput="setTermManual()" onfocus="this.style.borderColor='var(--steel)'" onblur="this.style.borderColor='var(--border)'">
+          <span style="font-size:11px;color:var(--sub)">months (1–60)</span>
+        </div>
+      </div>
+
+      <div class="sec">Risk Flags</div>
+
+      <div class="f">
+        <label>Prior Daniels Default (last 2 years)?</label>
+        <div class="tg-row">
+          <button class="tg" id="dy" onclick="tog('def',true)">✓ Yes — Prior default</button>
+          <button class="tg yes" id="dn" onclick="tog('def',false)">✓ No — Clean</button>
+        </div>
+      </div>
+
+      <div class="f">
+        <label>Monthly Rent + All Other Debts ($)</label>
+        <input type="number" id="debts" value="1100" min="0" step="50">
+      </div>
+
+      <div class="f">
+        <label>5+ Credit Inquiries in Last 12 Months?</label>
+        <div class="tg-row">
+          <button class="tg" id="iy" onclick="tog('inq',true)">⚠ Yes — 5 or more</button>
+          <button class="tg yes" id="in2" onclick="tog('inq',false)">✓ No — Under 5</button>
+        </div>
+      </div>
+
+      <button class="cta" onclick="calculate()">⚡ Run Pre-Screen</button>
+      <button class="rst" onclick="resetAll()">Reset form</button>
+    </div>
+  </div>
+
+  <!-- ════════ RIGHT — RESULTS ════════ -->
+  <div class="rcol" id="rcol">
+    <div class="panel">
+      <div class="idle">
+        <div class="idle-ico">🏠</div>
+        <div class="idle-t">Ready to evaluate</div>
+        <div class="idle-s">Enter customer details on the left and press <strong>Run Pre-Screen</strong>.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">Daniels Home Center · Credit Pre-Screen Tool v3.0 · Hybrid Model · April 2026 · Internal use only · Portfolio validated: 2,832 accounts $4.09M</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════
+const ST = { ver:true, def:false, inq:false };
+
+// ════════════════════════════════════════════════════════════
+// PRODUCT CONFIG
+// ════════════════════════════════════════════════════════════
+const PROD = {
+  furniture:   {adj:0,  minFico:550, maxIH:9999, maxDP:40, label:'Furniture',       safe:true,  flex:true,  minTerm:6,  maxTermOverride:null},
+  mattress:    {adj:0,  minFico:550, maxIH:9999, maxDP:40, label:'Mattress',        safe:true,  flex:true,  minTerm:6,  maxTermOverride:null},
+  accessories: {adj:0,  minFico:550, maxIH:9999, maxDP:40, label:'Accessories',     safe:true,  flex:true,  minTerm:6,  maxTermOverride:null},
+  appliances:  {adj:5,  minFico:550, maxIH:9999, maxDP:45, label:'Appliances',      safe:false, flex:true,  minTerm:6,  maxTermOverride:null},
+  electronics: {adj:12, minFico:600, maxIH:2500, maxDP:50, label:'Electronics',     safe:false, flex:true,  minTerm:6,  maxTermOverride:18},
+  seasonal:    {adj:15, minFico:600, maxIH:2000, maxDP:50, label:'Seasonal',        safe:false, flex:false, minTerm:6,  maxTermOverride:12},
+  iphone:      {adj:25, minFico:600, maxIH:1000, maxDP:50, label:'iPhone / Apple',  safe:false, flex:false, minTerm:6,  maxTermOverride:12},
+};
+
+// ════════════════════════════════════════════════════════════
+// TIER CONFIG (guardrails included)
+// ════════════════════════════════════════════════════════════
+const TIER = {
+  A:{maxTerm:36, maxDTI:45, maxLTV:90, apr:29, limitCap:5000, limitMult:2.0, pmtMin:100, pmtRealMin:120, maxDP:45},
+  B:{maxTerm:24, maxDTI:40, maxLTV:85, apr:33, limitCap:3500, limitMult:1.5, pmtMin:100, pmtRealMin:120, maxDP:45},
+  C:{maxTerm:12, maxDTI:35, maxLTV:80, apr:37, limitCap:1500, limitMult:1.5, pmtMin:100, pmtRealMin:100, maxDP:40},
+};
+
+// DP Matrix
+const DP_MAT = {A:[5,10,15,20], B:[10,15,20,25], C:[20,25,30,40]};
+const DP_BRK = [800,1500,2500];
+
+function getBaseDPpct(tier, sale) {
+  let i = sale>=DP_BRK[2]?3:sale>=DP_BRK[1]?2:sale>=DP_BRK[0]?1:0;
+  return DP_MAT[tier][i];
+}
+
+// ════════════════════════════════════════════════════════════
+// EDGE CASE DETECTOR
+// ════════════════════════════════════════════════════════════
+function detectEdgeCase(fico, score, tradelines, tenure, verified, emptype, income, dpInput, sale) {
+  const cases = [];
+  // Thin file
+  if (tradelines === 'thin') cases.push({type:'thin', label:'Thin File', icon:'📄', rule:'Limited credit history. Use verified income and tenure as substitute indicators. Allow in-house on safe products with $400+ DP if FICO ≥ 550.', flex:true});
+  // Strong tenure + weak FICO
+  if (tenure >= 18 && fico >= 550 && fico < 600) cases.push({type:'tenure', label:'Loyal Customer — Weak FICO', icon:'🤝', rule:'Long loyalty offsets some FICO risk on safe products. Apply maximum tenure relief where eligible (FICO ≥ 600 gate still applies). Flag for manager awareness.', flex:true});
+  // High DP + weak credit
+  const dpPct = sale > 0 ? (dpInput/sale)*100 : 0;
+  if (dpPct >= 30 && fico < 580) cases.push({type:'highdp', label:'High DP / Weak Credit', icon:'💵', rule:'Large DP reduces exposure but does NOT reduce default probability. Do not use DP alone to override FICO gates. DP protects Daniels cash — it does not predict payment behavior.', flex:false});
+  // Self-employed
+  if (emptype === 'selfemployed') cases.push({type:'self', label:'Self-Employed', icon:'💼', rule:'Treat as self-declared income regardless of documents. No streamlined path. one. Full scoring required. External routing preferred for Tier B/C.', flex:false});
+  // Strong tenure very long
+  if (tenure >= 24 && fico >= 600) cases.push({type:'tenure2', label:'Strong Loyalty (24+ mo)', icon:'⭐', rule:'Eligible for full tenure relief on safe products. DP can be waived if FICO ≥ 600. Highest conversion opportunity — propose best deal first.', flex:true});
+  return cases;
+}
+
+// ════════════════════════════════════════════════════════════
+// SCORE
+// ════════════════════════════════════════════════════════════
+function calcScore(fico, income, verified, tenure, tradelines) {
+  let s = Math.min(50, Math.max(0, (fico-500)/3));
+  s += tradelines==='strong'?15:tradelines==='moderate'?10:tradelines==='weak'?5:2;
+  s += verified?8:0;
+  s += (verified&&income>=2500)?10:(verified&&income>=1500)?5:0;
+  s += tenure>=24?10:tenure>=6?5:0;
+  return Math.round(s);
+}
+function getTier(sc){ return sc>=75?'A':sc>=60?'B':'C'; }
+
+// ════════════════════════════════════════════════════════════
+// DP CALCULATION (with guardrails)
+// ════════════════════════════════════════════════════════════
+function calcDP(tier, sale, product, fico, tenure, verified) {
+  const p = PROD[product]; const t = TIER[tier];
+  const isI = product==='iphone';
+  const fr = fico>=550&&fico<600;
+  let base = getBaseDPpct(tier, sale);
+  let adj = p.adj;
+  let relief = 0;
+  if (fico>=600 && !isI) {
+    if (tenure>=24) relief=10;
+    else if (tenure>=12) relief=10;
+    else if (tenure>=6) relief=5;
+  }
+  let raw = Math.max(0, base+adj-relief);
+  if (fr) raw = Math.max(raw, (400/sale)*100);
+  if (isI) raw = Math.max(25, raw);
+  // GUARDRAIL: cap at product max and tier max
+  raw = Math.min(raw, Math.min(p.maxDP, t.maxDP));
+  const reqD = Math.max(isI?0.25*sale:200, Math.round(raw/100*sale));
+  return {pct:raw, dollar:reqD, base, adj, relief, fr, isI};
+}
+
+// ════════════════════════════════════════════════════════════
+// GUARDRAIL CHECKS
+// ════════════════════════════════════════════════════════════
+function checkGuardrails(tier, product, sale, dpInput, term, monthly, income, debts, financed) {
+  const t = TIER[tier]; const p = PROD[product];
+  const warnings = [];
+  const effectiveTerm = p.maxTermOverride ? Math.min(term, p.maxTermOverride) : term;
+  const maxTerm = Math.min(t.maxTerm, p.maxTermOverride || 999);
+  if (term > maxTerm) warnings.push(`Term ${term}mo exceeds max ${maxTerm}mo for ${p.label} Tier ${tier}. Reduced to ${maxTerm}mo.`);
+  if (monthly > 0 && monthly < t.pmtRealMin) warnings.push(`Payment $${Math.round(monthly)}/mo is below realistic minimum $${t.pmtRealMin}. Customer unlikely to sustain. Shorten term.`);
+  const dti = income>0 ? ((monthly+debts)/income)*100 : 999;
+  if (dti > t.maxDTI) warnings.push(`DTI ${dti.toFixed(0)}% exceeds Tier ${tier} max ${t.maxDTI}%. Deal not realistically sellable.`);
+  const ltv = sale>0 ? (financed/sale)*100 : 0;
+  if (ltv > t.maxLTV) warnings.push(`LTV ${ltv.toFixed(0)}% exceeds Tier ${tier} max ${t.maxLTV}%. Increase DP.`);
+  // ── DTI INPUT PROTECTION (non-blocking) ─────────────────────────────────────
+  // Flags likely understated debts before they produce a false-clean DTI.
+  // Trigger: debts < 22% of income AND income > $1,500/mo.
+  // A working adult in California realistically carries rent, phone, and
+  // transportation — minimum ~$500–700/mo regardless of income level.
+  // Does NOT block the deal. Forces approver awareness at point of entry.
+  if (income > 1500 && debts < income * 0.22) {
+    warnings.push(`⚠ Monthly obligations ($${Math.round(debts).toLocaleString()}) appear low for this income level. Confirm rent, car payment, and all recurring debts are included.`);
+  }
+  return { warnings, dti, ltv, dtiOK:dti<=t.maxDTI, ltvOK:ltv<=t.maxLTV, effectiveTerm };
+}
+
+// ════════════════════════════════════════════════════════════
+// SALVAGE ENGINE (Priority 2)
+// ════════════════════════════════════════════════════════════
+function findSalvage(tier, sale, product, fico, tenure, verified, income, debts) {
+  const t = TIER[tier]; const p = PROD[product];
+  const subPrime = fico < 550;
+  const fr = fico >= 550 && fico < 600;
+  const maxT = p.maxTermOverride ? Math.min(t.maxTerm, p.maxTermOverride) : t.maxTerm;
+
+  // ── SUB-PRIME FINANCED CAP (rule-based, no human judgment) ───────────────────
+  // $1,200 cap: furniture/mattress ONLY, AND income must be verified.
+  //   Unverified income → $800 cap regardless of product.
+  //   Appliances → $600 cap regardless of verification.
+  //   Electronics/iPhone/Seasonal → blocked before reaching here.
+  // Sub-prime term ceiling: 6 months maximum. Non-negotiable.
+  //   Rationale: at 19–27% default, long exposure windows compound loss severity.
+  const subPrimeSafe = product === 'furniture' || product === 'mattress';
+  const subPrimeMaxFinanced = subPrime
+    ? (subPrimeSafe && verified ? 1200 : subPrimeSafe ? 800 : 600)
+    : 9999;
+  const subPrimeTermCap = 6;  // hard ceiling for sub-prime regardless of tier
+
+  // ── DP SEARCH CEILING ────────────────────────────────────────────────────────
+  // Sub-prime: DP can go up to 50% of sale to reach the financed cap.
+  //   Never exceed 0.9× monthly income (realistic collectability limit).
+  // Standard: 35% of sale or 1.0× monthly income, capped at $1,200.
+  const maxDPdollar = subPrime
+    ? Math.min(sale * 0.50, income * 0.9)
+    : Math.min(sale * 0.35, income * 1.0, 1200);
+  const maxFinanced = subPrime ? subPrimeMaxFinanced : 9999;
+  const effectiveMaxT = subPrime ? Math.min(maxT, subPrimeTermCap) : maxT;
+  const dpBase = calcDP(tier, sale, product, fico, tenure, verified).dollar;
+  for (let dp=dpBase; dp<=maxDPdollar; dp+=50) {
+    const fin = Math.max(0, sale-dp);
+    const lim = Math.min(t.limitCap, income*t.limitMult);
+    if (fin>lim||fin>p.maxIH||fin>maxFinanced) continue;  // enforce financed cap
+    const ltv = sale>0?(fin/sale)*100:0;
+    if (ltv>t.maxLTV) continue;
+    for (let tm=6; tm<=effectiveMaxT; tm+=3) {
+      const pmt = fin/tm;
+      if (pmt<t.pmtRealMin) continue;
+      const dti = income>0?((pmt+debts)/income)*100:999;
+      if (dti<=t.maxDTI) return {dp:Math.round(dp), term:tm, pmt:Math.round(pmt), financed:Math.round(fin), dti:dti.toFixed(0)};
+    }
+  }
+  return null;
+}
+
+// ════════════════════════════════════════════════════════════
+// SPLIT TENDER ENGINE (Priority 3)
+// ════════════════════════════════════════════════════════════
+function buildSplit(tier, sale, dpInput, fico, income, product) {
+  const caps = {A:5000,B:3000,C:1500};
+  const danielsCap = Math.min(caps[tier], income*TIER[tier].limitMult, PROD[product].maxIH);
+  const danielsAmt = Math.min(danielsCap, Math.max(0, sale-dpInput));
+  // CALIBRATION: Lower minimum split threshold from $500 → $300 to trigger split
+  // more consistently for mid-ticket deals in the 550–620 FICO range.
+  if (danielsAmt<300) return null;
+  const extAmt = Math.max(0, sale-dpInput-danielsAmt);
+  if (extAmt<150) return null; // also lower external minimum for consistency
+  return {danielsAmt:Math.round(danielsAmt), extAmt:Math.round(extAmt), partner:fico<600?'SNAP / Acima':'Synchrony / WF'};
+}
+
+// ════════════════════════════════════════════════════════════
+// CONVERSATION GUIDE GENERATOR  (pre-screen language only)
+// ════════════════════════════════════════════════════════════
+function genSalesScript(cls, decision, dp, monthly, term, salvage, split, fico, product, shortfall) {
+  const pname = PROD[product]?.label || product;
+  const scripts = {
+    approved: {
+      quote: `"Based on what you've shared, this looks like a strong fit for our financing program. You'd likely need $${(dp||0).toLocaleString()} down, and the payment would be around $${(monthly||0).toLocaleString()} a month for ${term} months. Does that sound workable?"`,
+      steps: [
+        {n:1, t:'Confirm the estimated down payment', d:`<strong>$${(dp||0).toLocaleString()} down</strong> is the likely requirement. Let the customer know this is the amount needed at the time of contract signing.`},
+        {n:2, t:'Review the estimated monthly payment', d:`Around <strong>$${(monthly||0).toLocaleString()} per month</strong> for ${term} months. Confirm this fits their budget before moving forward.`},
+        {n:3, t:'Next step: formal application', d:'This pre-screen looks favorable. Move to the full application process — customer will need ID, utility bill, and pay stub.'},
+      ]
+    },
+    adjust: {
+      quote: salvage
+        ? `"This could work with a small adjustment. If you're able to put $${(salvage.dp||0).toLocaleString()} down, the estimated payment would be around $${(salvage.pmt||0).toLocaleString()} a month for ${salvage.term} months. Is that something you could manage?"`
+        : `"This is close — a small adjustment to the down payment or term could make it work. Want to explore the options?"`,
+      steps: salvage ? [
+        {n:1, t:`Estimated down payment: $${(salvage.dp||0).toLocaleString()}`, d:`This is the amount that makes in-house financing likely viable. Ask: <strong>"Could you bring $${(salvage.dp||0).toLocaleString()} at the time of purchase?"</strong>`},
+        {n:2, t:`Suggested term: ${salvage.term} months`, d:`Estimated payment: <strong>$${(salvage.pmt||0).toLocaleString()}/month</strong>. This structure keeps the deal within program guidelines.`},
+        {n:3, t:"If the down payment isn't available", d:'A split financing option or an external partner may be worth exploring instead.'},
+      ] : [
+        {n:1, t:'A higher down payment would help', d:`Around $${(shortfall||0).toLocaleString()} more would improve the likely outcome significantly. Ask if that's feasible.`},
+        {n:2, t:'Consider a shorter term', d:'A shorter repayment period can bring the deal into a viable range. Try adjusting by 6 months.'},
+        {n:3, t:'Or consider a smaller purchase', d:'A lower purchase price may qualify more cleanly for in-house financing.'},
+      ]
+    },
+    split: {
+      quote: split
+        ? `"There's a financing option that could work well here — we'd handle $${(split.danielsAmt||0).toLocaleString()} through our program, and a partner would cover the rest. You'd still be able to take your ${pname} home. Want me to explain how that would look?"`
+        : `"A split financing approach might be the best fit here — part through our program and part through a partner. Want to hear how it works?"`,
+      steps: split ? [
+        {n:1, t:`Our program: estimated $${(split.danielsAmt||0).toLocaleString()}`, d:`This is the portion we'd likely finance in-house. Standard program terms would apply.`},
+        {n:2, t:`Partner program: estimated $${(split?.extAmt||0).toLocaleString()} via ${split?.partner||'financing partner'}`, d:`We'd submit a separate application to ${split?.partner||'our financing partner'} for this portion. Fast process.`},
+        {n:3, t:'Both agreements needed at time of purchase', d:'Final approval from both programs is required before goods are released. This is confirmed at the formal application stage.'},
+      ] : []
+    },
+    external: {
+      quote: fico < 600
+        ? `"Based on your profile, one of our financing partners would likely be the best fit for this deal. They work with a wide range of situations and it's a straightforward process. Would you like me to point you in that direction?"`
+        : `"For a deal like this, our financing partner Synchrony is likely the strongest option. They have competitive programs and the process is usually fast. Interested in exploring that?"`,
+      steps: [
+        {n:1, t:`Likely path: ${fico<600?'SNAP / Acima':'Synchrony / WF'}`, d:`Based on this pre-screen, an external financing partner is the most likely fit. We'd refer you to their program for a full application.`},
+        {n:2, t:'Set the right expectation', d:"Let the customer know this is a partner program — separate from our in-house financing, but still a good option."},
+        {n:3, t:'Note the pre-screen result', d:'Record this outcome so the approver has context when the formal application comes in.'},
+      ]
+    },
+    declined: {
+      quote: `"Based on what you've shared, our financing programs may not be the best fit right now. I want to be straightforward about that, but I also want to make sure you know what your options are going forward."`,
+      steps: [
+        {n:1, t:'Share the result clearly and respectfully', d:'This is a pre-screen result, not a permanent decision. The customer is not being declined from everything — just from the current program under current conditions.'},
+        {n:2, t:'Give a simple, non-technical reason', d:`Example: "Our program has specific requirements that aren't matched right now." Do <strong>not</strong> reference internal score thresholds.`},
+        {n:3, t:'Offer a constructive path forward', d:'If an external option like SNAP is available, mention it. Otherwise, suggest steps that could improve the profile over time.'},
+      ]
+    },
+  };
+  return scripts[cls] || scripts.external;
+}
+
+// ════════════════════════════════════════════════════════════
+// MAIN ENGINE
+// ════════════════════════════════════════════════════════════
+function calculate() {
+  const fico     = parseInt(document.getElementById('fico').value);
+  const income   = parseFloat(document.getElementById('income').value)||0;
+  const purchase = parseFloat(document.getElementById('purchase').value)||0;
+  const tax      = parseFloat(document.getElementById('tax').value)||0;
+  const sale     = purchase*(1+tax/100);
+  const tenure   = parseInt(document.getElementById('tenure').value);
+  const product  = document.getElementById('product').value;
+  const dpInput  = parseFloat(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0;
+  const termReq  = getTermValue();
+  const debts    = parseFloat(document.getElementById('debts').value)||0;
+  const tradelines = document.getElementById('tradelines').value;
+  const emptype  = document.getElementById('emptype').value;
+  const {ver:verified, def:priorDef, inq:inquiries} = ST;
+  const prod = PROD[product]; const isI = product==='iphone';
+  const fr = fico>=550&&fico<600;
+
+  // edge case detection
+  const edgeCases = detectEdgeCase(fico, 0, tradelines, tenure, verified, emptype, income, dpInput, sale);
+
+  const steps = []; let decision=null, cls='neutral', routing=null;
+  let finalDP=dpInput, finalTerm=termReq, finalPmt=0, finalFinanced=0;
+  let finalTier=null, finalLimit=0, finalAPR=0;
+  let salvage=null, split=null, hardStop=false;
+  const guardrailAlerts = [];
+
+  // ── PRIORITY 1: HARD STOPS ──────────────────────────────
+  let hs = null;
+  if (priorDef) hs='Prior Daniels default on file (last 2 years).';
+  else if (inquiries) hs='5+ credit inquiries in last 12 months.';
+  else if (income<=0) hs='No income entered — cannot evaluate.';
+  else if (emptype==='none') hs='No verifiable income source. Cannot approve.';
+
+  if (hs) {
+    steps.push({s:'fail',n:'Hard Stops',d:'HARD STOP — Cannot process',note:hs});
+    ['FICO Gate','Score & Tier','Deal Context','Product Risk','Down Payment','Term & Payment','Structure Check','Likely Path'].forEach(n=>steps.push({s:'skip',n,d:'Skipped',note:''}));
+    decision='NOT VIABLE — Hard Stop'; cls='declined'; hardStop=true; routing=fico<550?'snap':'external';
+    render(decision,cls,steps,null,null,null,null,null,null,null,null,sale,dpInput,null,null,routing,null,null,null,null,0,0,0,edgeCases,guardrailAlerts,genSalesScript('declined',decision,0,0,0,null,null,fico,product,0));
+    return;
+  }
+  steps.push({s:'pass',n:'Hard Stops',d:'Clear — no disqualifying flags',note:'No prior default, no fraud flags, no excessive inquiries.'});
+
+  // ── FICO GATE ───────────────────────────────────────────
+  // CALIBRATION: For FICO <550, attempt limited structure (high DP + split) before routing to SNAP.
+  // Hard exit only if structure evaluation also fails.
+  const subPrime = fico < 550;
+  if (subPrime) {
+    steps.push({s:'warn',n:'FICO Gate',d:'FICO '+fico+' — In-house not generally viable',note:'19.6–27.8% default rate at this level. Evaluating limited structure options (high DP / split) before routing externally.'});
+    // Allow scoring to continue — engine will attempt structure/split and only exit to SNAP if both fail
+  } else if (fr) {
+    steps.push({s:'warn',n:'FICO Gate',d:'FICO '+fico+' — Restricted Path (550–599)',note:'8.6% default. Safe products only, max $1,500, $400 DP min, no tenure relief.'});
+  } else {
+    const label = fico<650?'Standard (600–649)':fico<700?'Normal (650–699)':'Preferred (700+)';
+    const rate  = fico<650?'3.4%':fico<700?'1.7%':'0.3%';
+    steps.push({s:'pass',n:'FICO Gate',d:'FICO '+fico+' — '+label,note:rate+' default rate.'});
+  }
+
+  // ── SCORE & TIER ────────────────────────────────────────
+  const score = calcScore(fico, income, verified, tenure, tradelines);
+  const tier = getTier(score);
+  // CALIBRATION: Self-employed gets full scoring result — no longer capped at Tier B.
+  // They are excluded from streamlined path (correct) but NOT penalized in tier assignment.
+  // APR adder for self-employed still applies in calcAPR.
+  const effTier = tier;
+  finalTier=effTier; finalAPR=calcAPR(effTier,product,verified,emptype); finalLimit=Math.min(TIER[effTier].limitCap, income*TIER[effTier].limitMult);
+  steps.push({s:'info',n:'Score & Tier',d:'Tier '+effTier+'  (score '+score+'/100)'+(emptype==='selfemployed'?' — self-employed: full scoring applied, streamlined path not available':''),note:'A≥75 · B 60–74 · C<60. FICO, trade lines, income, tenure.'});
+
+  // ── DEAL SIZE CONTEXT (internal signal only — not a gate) ──────────────────
+  // $1,200 is used here as a context signal to inform the recommendation,
+  // NOT as a threshold that blocks or changes the evaluation path.
+  // This simulator is a prequalification tool — all deal sizes are evaluated fully.
+  const projFinanced = Math.max(0, sale - dpInput);
+  const smallDeal    = projFinanced < 1200;  // context flag — used for labeling only
+  const dealContext  = smallDeal
+    ? 'Small deal (financed < $1,200) — streamlined path likely'
+    : 'Standard deal — full evaluation applied';
+
+  // ── STREAMLINED PATH: FICO 660+, safe product, verified income, small deal ──
+  // All hard risk rules are still enforced. This is a fast-track label, not a bypass.
+  const azOK = fico>=660 && sale<=1200 && verified && prod.safe && emptype!=='selfemployed';
+
+  if (azOK) {
+    steps.push({s:'pass',n:'Streamlined Path',d:'STREAMLINED — All fast-track conditions met',note:'FICO 660+, verified income, safe product, small deal. Most likely outcome: in-house, minimal friction.'});
+    decision='LIKELY IN-HOUSE — Streamlined'; cls='approved'; routing='inhouse';
+    const dpAZ=Math.max(200,Math.round(getBaseDPpct(effTier,sale)/100*sale));
+    const termAZ=Math.min(termReq,TIER[effTier].maxTerm); const finAZ=Math.max(0,sale-dpAZ);
+    const pmtAZ=Math.round(finAZ/Math.max(1,termAZ));
+    ['Product Risk','Down Payment','Term & Payment','Structure Check'].forEach(n=>steps.push({s:'skip',n,d:'Skipped — streamlined path applies',note:''}));
+    steps.push({s:'pass',n:'Likely Path',d:'In-house financing — high confidence this will qualify',note:dealContext});
+    const sc=genSalesScript('approved',decision,dpAZ,pmtAZ,termAZ,null,null,fico,product,0);
+    render(decision,cls,steps,effTier,score,dpAZ,getBaseDPpct(effTier,sale),termAZ,pmtAZ,finalLimit,finalAPR,sale,dpAZ,null,null,routing,null,null,null,null,0,0,0,edgeCases,guardrailAlerts,sc);
+    return;
+  }
+
+  // Not streamlined — proceed to full evaluation. Note deal context.
+  // Do NOT mention $1,200 as a failure reason. It is not a gate.
+  const azNote = [];
+  if(fico<660) azNote.push('FICO '+fico+' (660 preferred for streamlined)');
+  if(!verified) azNote.push('Income not verified');
+  if(!prod.safe) azNote.push(prod.label+' — full product evaluation required');
+  if(emptype==='selfemployed') azNote.push('Self-employed — full scoring applied');
+  steps.push({s:'info',n:'Deal Context',d:dealContext,note: azNote.length>0 ? 'Full evaluation: '+azNote.join(' · ') : 'Proceeding to full evaluation.'});
+
+  // ── PRODUCT RISK ────────────────────────────────────────
+  let prodBlock=false;
+  // CALIBRATION: Sub-prime (FICO <550) + safe product → allow limited structure attempt
+  // instead of hard blocking. Exposure capped at $800 financed. High-risk products still blocked.
+  const subPrimeSafeOverride = subPrime && prod.safe;
+  if (subPrimeSafeOverride) {
+    const subCapLabel = (product==='furniture'||product==='mattress')
+      ? (verified ? '$1,200' : '$800 (unverified income — verified required for $1,200)')
+      : '$600';
+    steps.push({s:'warn',n:'Product Risk',d:prod.label+' — Limited in-house possible (sub-prime)',note:`FICO below 550: safe product path only. Exposure cap: ${subCapLabel} financed. Elevated DP required. Term limited to 6 months.`});
+  } else if (fico<prod.minFico) {
+    prodBlock=true;
+    steps.push({s:'fail',n:'Product Risk',d:prod.label+' — FICO too low',note:prod.label+' requires FICO ≥ '+prod.minFico+'. FICO '+fico+'.  '+(prod.flex?'Salvage possible with higher DP.':'Hard rule — no override.')});
+  } else if (fr&&!prod.safe) {
+    prodBlock=true;
+    steps.push({s:'fail',n:'Product Risk',d:prod.label+' — Not allowed on restricted path',note:'FICO 550–599 restricted to safe products only.'});
+  } else {
+    steps.push({s:'pass',n:'Product Risk',d:prod.label+(prod.adj>0?' (+'+prod.adj+'% DP)':' (no DP adj)'),note:isI?'⚠ iPhone: 25% DP min, max $1,000, no tenure relief, no override.':'Product approved for in-house evaluation.'});
+  }
+
+  // ── DOWN PAYMENT ────────────────────────────────────────
+  const dpCalc=calcDP(effTier,sale,product,fico,tenure,verified);
+  const reqDP=dpCalc.dollar; const reqDPpct=dpCalc.pct;
+  const dpOK=dpInput>=reqDP; const dpShortfall=Math.max(0,reqDP-dpInput);
+  let dpNote=dpOK?`DP met. Collect $${reqDP.toLocaleString()} cash/check before signing.`:`Shortfall $${dpShortfall.toLocaleString()}. Need $${reqDP.toLocaleString()} down.`;
+  // TENURE RELIEF DISPLAY RULE: show ONLY when relief was actually applied (fico>=600).
+  // When fico<600, relief=0 by definition. Show nothing — no "−0% applied" label,
+  // no mention of the concept. A labeled zero invites floor negotiation.
+  if(dpCalc.relief>0)dpNote+=` Loyalty relief −${dpCalc.relief}% applied (FICO ≥600 eligible).`;
+  if(dpCalc.fr)dpNote+=` $400 floor applied (FICO 550–599 restricted path).`;
+  if(isI)dpNote+=` iPhone 25% minimum — no relief, no override.`;
+  steps.push({s:dpOK?'pass':'warn',n:'Down Payment',d:`Required: $${reqDP.toLocaleString()} (${reqDPpct.toFixed(0)}%) · Customer has: $${dpInput.toLocaleString()}`,note:dpNote});
+
+  // ── TERM & PAYMENT ──────────────────────────────────────
+  const maxT = prod.maxTermOverride ? Math.min(TIER[effTier].maxTerm,prod.maxTermOverride) : TIER[effTier].maxTerm;
+  finalTerm=Math.min(termReq,maxT);
+  finalFinanced=Math.max(0,sale-Math.max(dpInput,reqDP));
+  finalPmt=Math.round(finalFinanced/finalTerm);
+  const gr=checkGuardrails(effTier,product,sale,Math.max(dpInput,reqDP),finalTerm,finalPmt,income,debts,finalFinanced);
+  gr.warnings.forEach(w=>guardrailAlerts.push(w));
+  let termStat=(!gr.dtiOK||!gr.ltvOK||finalPmt<TIER[effTier].pmtRealMin)?'warn':'pass';
+  steps.push({s:termStat,n:'Term & Payment',d:`Term: ${finalTerm}mo · Pmt: $${finalPmt}/mo · DTI: ${gr.dti.toFixed(0)}%`,note:`APR: ${finalAPR}% · LTV: ${gr.ltv.toFixed(0)}% · Max DTI: ${TIER[effTier].maxDTI}% · Max term: ${maxT}mo`});
+  steps.push({s:finalFinanced<=finalLimit?'pass':'warn',n:'Credit Limit',d:`Limit $${Math.round(finalLimit).toLocaleString()} · Financed $${Math.round(finalFinanced).toLocaleString()}`,note:finalFinanced<=finalLimit?'Within limit.':'Exceeds limit — increase DP to reduce financed amount.'});
+
+  // ── PRIORITY 2: SALVAGE ─────────────────────────────────
+  // CALIBRATION: Run structure check for ALL cases where deal is not already clear.
+  // Previously skipped when prodBlock=true — this caused too-early external routing.
+  // Sub-prime FICO also now evaluated here (no early exit at FICO gate).
+  const allClear=!prodBlock&&dpOK&&gr.dtiOK&&gr.ltvOK&&finalFinanced<=finalLimit&&finalPmt>=TIER[effTier].pmtRealMin;
+  const shouldTryStructure = !allClear && (prod.flex || fr || subPrime || subPrimeSafeOverride);
+  if (shouldTryStructure) {
+    const sv=findSalvage(effTier,sale,product,fico,tenure,verified,income,debts);
+    if(sv){salvage=sv;steps.push({s:'sv',n:'Structure Check',d:'✦ STRUCTURE FOUND — in-house path likely viable with adjustments',note:`DP $${sv.dp.toLocaleString()} · ${sv.term}mo · $${sv.pmt}/mo · DTI ${sv.dti}%`});}
+    else {
+      // PRIORITY 3: SPLIT TENDER — always attempt before routing external
+      const sp=buildSplit(effTier,sale,Math.max(dpInput,reqDP*0.5),fico,income,product);
+      if(sp){split=sp;steps.push({s:'sv',n:'Structure Check',d:'✦ SPLIT TENDER — partial in-house possible',note:`Daniels: $${sp.danielsAmt.toLocaleString()} · ${sp.partner}: $${sp.extAmt.toLocaleString()}`});}
+      else steps.push({s:'warn',n:'Structure Check',d:'No viable in-house structure found — external path recommended',note:'Salvage and split both evaluated. Route to best-fit external partner.'});
+    }
+  } else if (!allClear) {
+    // CALIBRATION: For ALL remaining non-clear cases (strict products, any edge case),
+    // ALWAYS try split before external. Split is a natural path, not a last resort.
+    const sp=buildSplit(effTier,sale,Math.max(dpInput,reqDP*0.5),fico,income,product);
+    if(sp){split=sp;steps.push({s:'sv',n:'Structure Check',d:'✦ SPLIT TENDER — partial in-house possible',note:`Daniels: $${sp.danielsAmt.toLocaleString()} · ${sp.partner}: $${sp.extAmt.toLocaleString()}`});}
+    else steps.push({s:'warn',n:'Structure Check',d:'No viable structure found — external path recommended',note:'Full in-house and split both evaluated. Route to external financing.'});
+  } else if(allClear) {
+    steps.push({s:'skip',n:'Structure Check',d:'Not needed — deal pre-qualifies as-is',note:''});
+  }
+
+  // ── PRIORITY 4: LIKELY PATH & RECOMMENDATION ────────────────────────────────
+  // CALIBRATION: Prefer structure over rejection.
+  // 550–599 in-house when allClear. Self-employed in-house when allClear.
+  // Tier C tries structure before external. Sub-prime routes SNAP only after structure fails.
+  if (allClear) {
+    if (subPrime) {
+      // Sub-prime allClear means DP + structure met — in-house viable with tight limits
+      decision='LIKELY IN-HOUSE — With Adjustments'; cls='adjust'; routing='inhouse';
+      steps.push({s:'pass',n:'Likely Path',d:'In-house financing — viable under tight structure',note:'FICO below 550 but deal structure clears all guardrails. High DP compensates for risk level. '+dealContext});
+    } else if ((effTier==='A'||effTier==='B')&&fico>=550) {
+      // CALIBRATION: 550+ in-house when structure passes — removed the fico>=600 gate here
+      // 550–599 restricted path already enforced at product/DP level
+      decision='LIKELY IN-HOUSE'; cls='approved'; routing='inhouse';
+      steps.push({s:'pass',n:'Likely Path',d:'In-house financing — high confidence this will qualify',note:'All prequalification criteria met. '+dealContext});
+    } else if (effTier==='C') {
+      // Tier C can still go in-house if structure passes — don't auto-route external
+      decision='LIKELY IN-HOUSE — With Adjustments'; cls='adjust'; routing='inhouse';
+      steps.push({s:'pass',n:'Likely Path',d:'In-house financing — viable with tight Tier C structure',note:'Tier C: max 12 months, $1,500 cap. Structure clears. '+dealContext});
+    } else {
+      decision='LIKELY IN-HOUSE'; cls='approved'; routing='inhouse';
+      steps.push({s:'pass',n:'Likely Path',d:'In-house financing — high confidence this will qualify',note:dealContext});
+    }
+  } else if(salvage) {
+    decision='LIKELY IN-HOUSE — With Adjustments'; cls='adjust'; routing='inhouse';
+    finalDP=salvage.dp; finalTerm=salvage.term; finalPmt=salvage.pmt; finalFinanced=salvage.financed;
+    steps.push({s:'pass',n:'Likely Path',d:'In-house financing — viable with adjusted structure',note:`Raise DP to $${salvage.dp.toLocaleString()}, set term ${salvage.term}mo. This is the most likely viable in-house structure.`});
+  } else if(split) {
+    decision='LIKELY SPLIT TENDER'; cls='split'; routing='split';
+    steps.push({s:'info',n:'Likely Path',d:'SPLIT — In-house + External most likely',note:`Daniels: $${split.danielsAmt.toLocaleString()} · ${split.partner}: $${split.extAmt.toLocaleString()}`});
+  } else {
+    // Only reach here after salvage AND split both failed
+    // CALIBRATION: Correct partner routing — sub-600 never goes to prime lenders
+    const ep = fico < 600 ? 'SNAP / Acima' : 'Synchrony / WF';
+    routing = fico < 600 ? 'snap' : 'external';
+    decision='LIKELY EXTERNAL — '+ep; cls='external';
+    steps.push({s:'warn',n:'Likely Path',d:'EXTERNAL — '+ep+' most likely',note: subPrime ? 'FICO below 550 — structure options exhausted. SNAP / Acima is the most suitable path.' : fico<600 ? 'FICO 550–599 — structure not viable under current terms. SNAP / Acima recommended.' : 'External financing is the recommended path based on this profile.'});
+  }
+
+  const sc=genSalesScript(cls,decision,finalDP||reqDP,finalPmt,finalTerm,salvage,split,fico,product,dpShortfall);
+  render(decision,cls,steps,effTier,score,finalDP||reqDP,reqDPpct,finalTerm,finalPmt,finalLimit,finalAPR,sale,dpInput,salvage,split,routing,gr.dti,gr.ltv,gr.dtiOK,gr.ltvOK,dpShortfall,finalFinanced,reqDP,edgeCases,guardrailAlerts,sc);
+}
+
+function calcAPR(tier,product,verified,emptype){
+  let a=TIER[tier].apr;
+  if(product==='electronics'||product==='iphone')a+=1;
+  if(!verified||emptype==='selfemployed')a+=3;
+  return Math.min(a,42);
+}
+
+// ════════════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════════════
+function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,dpInput,salvage,split,routing,dti,ltv,dtiOK,ltvOK,dpShort,financed,reqDP,edgeCases,guardrailAlerts,script) {
+  const sub={approved:'Most likely path: in-house — high confidence',split:'Most likely: partial in-house + external partner',adjust:'In-house viable with adjusted terms',external:'Most likely path: external financing',declined:'Not viable for in-house — see recommended path',neutral:''};
+  const chips={inhouse:'<span class="chip c-ih">🏠 In-House Financing</span>',external:'<span class="chip c-ex">🔄 External Financing</span>',snap:'<span class="chip c-snap">⚠ SNAP / Acima Only</span>',split:'<span class="chip c-split">⚡ Split Tender</span>'};
+  const ico={pass:'✓',fail:'✗',warn:'!',skip:'—',info:'i',sv:'✦',ec:'◈'};
+
+  // options grid
+  let optsH='';
+  if(tier){
+    const fv=parseInt(document.getElementById('fico').value);
+    const ep=fv<600?'SNAP / Acima':'Synchrony / WF';
+    if(cls==='approved')optsH=`<div class="og ani2"><div class="oc oa"><div class="oc-badge">✓ MOST LIKELY</div><div class="oc-lbl">Path A</div><div class="oc-title">In-House</div><div class="oc-det">$${(dp||0).toLocaleString()} down · ${term}mo · $${(pmt||0).toLocaleString()}/mo</div></div><div class="oc oc2" style="opacity:.5"><div class="oc-lbl">Path B</div><div class="oc-title">External</div><div class="oc-det">Available as backup</div></div><div class="oc od" style="opacity:.35"><div class="oc-lbl">Path C</div><div class="oc-title">Not Viable</div><div class="oc-det">Unlikely given profile</div></div></div>`;
+    else if(cls==='split'&&split)optsH=`<div class="og ani2"><div class="oc oa"><div class="oc-lbl">Daniels Portion</div><div class="oc-title">In-House</div><div class="oc-det">$${split.danielsAmt.toLocaleString()} in-house financing</div></div><div class="oc ob"><div class="oc-badge">✓ MOST LIKELY</div><div class="oc-lbl">Path B — Split</div><div class="oc-title">In-House + External</div><div class="oc-det">DHC $${split.danielsAmt.toLocaleString()} + ${split.partner} $${split.extAmt.toLocaleString()}</div></div><div class="oc oc2"><div class="oc-lbl">Path C</div><div class="oc-title">External Only</div><div class="oc-det">${split.partner} full amount</div></div></div>`;
+    else if(cls==='adjust'&&salvage)optsH=`<div class="og ani2"><div class="oc ob"><div class="oc-badge">✓ MOST LIKELY</div><div class="oc-lbl">Path A — Adjusted</div><div class="oc-title">In-House (Restructured)</div><div class="oc-det">$${salvage.dp.toLocaleString()} down · ${salvage.term}mo · $${salvage.pmt}/mo</div></div><div class="oc oc2"><div class="oc-lbl">Path B</div><div class="oc-title">External</div><div class="oc-det">${ep}</div></div><div class="oc od" style="opacity:.45"><div class="oc-lbl">Path C</div><div class="oc-title">Not Viable</div><div class="oc-det">Last resort</div></div></div>`;
+    else optsH=`<div class="og ani2"><div class="oc od" style="opacity:.4"><div class="oc-lbl">Path A</div><div class="oc-title">In-House</div><div class="oc-det">Not likely given profile</div></div><div class="oc oc2"><div class="oc-badge">✓ MOST LIKELY</div><div class="oc-lbl">Path B</div><div class="oc-title">External</div><div class="oc-det">${ep}</div></div><div class="oc od" style="opacity:.4"><div class="oc-lbl">Path C</div><div class="oc-title">Not Viable</div><div class="oc-det">If external unavailable</div></div></div>`;
+  }
+
+  // guardrail alerts
+  const grH = guardrailAlerts.length>0 ? guardrailAlerts.map(w=>`<div class="gr-alert"><div class="gr-ico">⚠</div><div class="gr-txt"><strong>Guardrail:</strong> ${w}</div></div>`).join('') : '';
+
+  // metrics
+  const mH=tier?`<div class="mg ani3"><div class="mc hl"><div class="mc-lbl">Required DP</div><div class="mc-val">$${(reqDP||dp||0).toLocaleString()}</div><div class="mc-sub">${Math.round(dpPct||0)}% of sale</div></div><div class="mc"><div class="mc-lbl">Monthly Payment</div><div class="mc-val">$${pmt>0?pmt.toLocaleString():'—'}</div><div class="mc-sub">${term}mo · APR ${apr||'—'}%</div></div><div class="mc"><div class="mc-lbl">Credit Limit</div><div class="mc-val">$${Math.round(limit||0).toLocaleString()}</div><div class="mc-sub">Tier ${tier} · Score ${score}</div></div></div><div class="mg2 ani4"><div class="mc"><div class="mc-lbl">Amount Financed</div><div class="mc-val">$${Math.round(financed||0).toLocaleString()}</div><div class="mc-sub">Sale $${Math.round(sale).toLocaleString()} − DP $${(reqDP||dp||0).toLocaleString()}</div></div><div class="mc${dtiOK===false||ltvOK===false?' warn':''}"><div class="mc-lbl">DTI / LTV</div><div class="mc-val" style="font-size:16px">${dti!=null?parseFloat(dti).toFixed(0):'—'}% / ${ltv!=null?parseFloat(ltv).toFixed(0):'—'}%</div><div class="mc-sub">${dtiOK===false?'⚠ DTI over limit':ltvOK===false?'⚠ LTV over limit':'Within limits'}</div></div></div>` : '';
+
+  // shortfall
+  const sfH=dpShort>0&&tier?`<div class="sf ani4"><div style="font-size:22px">💰</div><div><div class="sf-t">Down Payment Shortfall</div><div class="sf-b">Customer needs <strong>$${dpShort.toLocaleString()} more</strong> — total $${(reqDP||dp||0).toLocaleString()} required.</div><div class="sf-n">Say: "We need $${(reqDP||dp||0).toLocaleString()} down today. Can you do that?"</div></div></div>`:'';
+
+  // sales script
+  const scH=script?`<div class="script-card ani4"><div class="script-hdr ${cls}"><span>💬</span><h3>Conversation Guide</h3></div><div class="script-body"><div class="script-quote ${cls}">${script.quote}</div><div class="script-steps">${(script.steps||[]).map(s=>`<div class="script-step"><div class="sc-dot">${s.n}</div><div class="sc-txt"><strong>${s.t}</strong><br>${s.d}</div></div>`).join('')}</div></div></div>`:'';
+
+  // salvage card
+  const svH=salvage?`<div class="sv-card ani5"><div class="sv-hdr green"><span>🔧</span><h3>Deal Structuring — How to Make In-House Likely</h3></div><div class="sv-body"><div class="sv-row"><div class="sv-n g">1</div><div><div class="sv-title">Raise down payment to $${salvage.dp.toLocaleString()}</div><div class="sv-det">Ask: <em>"Can you bring $${salvage.dp.toLocaleString()} today?"</em> This is the amount that makes in-house financing most likely viable.</div></div></div><div class="sv-row"><div class="sv-n g">2</div><div><div class="sv-title">Set term to ${salvage.term} months</div><div class="sv-det">Payment = $${salvage.pmt}/mo. DTI = ${salvage.dti}% — within limit.</div></div></div><div class="sv-row"><div class="sv-n g">3</div><div><div class="sv-title">If this down payment is not available</div><div class="sv-det">A split financing option or external partner would be the next option to explore.</div></div></div></div></div>`:'';
+
+  const spH=split&&!salvage?`<div class="sv-card ani5"><div class="sv-hdr purple"><span>⚡</span><h3>Split Tender Structure</h3></div><div class="sv-body"><div class="sv-row"><div class="sv-n p">1</div><div><div class="sv-title">In-house portion: estimated $${split.danielsAmt.toLocaleString()}</div><div class="sv-det">in-house financing. Within Daniels safe exposure for Tier ${tier}.</div></div></div><div class="sv-row"><div class="sv-n p">2</div><div><div class="sv-title">${split.partner} covers $${split.extAmt.toLocaleString()}</div><div class="sv-det">Submit to ${split.partner}. Customer signs both agreements before goods released.</div></div></div><div class="sv-row"><div class="sv-n p">3</div><div><div class="sv-title">Customer leaves today with the full purchase</div><div class="sv-det">Both contracts completed first. Do not release merchandise on one contract alone.</div></div></div></div></div>`:'';
+
+  // edge cases
+  const ecH=edgeCases.length>0?`<div class="ec-card ani5"><div class="ec-hdr"><span>◈</span><h3>Edge Case Flags</h3></div><div class="ec-body">${edgeCases.map(e=>`<div class="ec-row"><div class="ec-ico">${e.icon}</div><div><div class="ec-name">${e.label}<span class="ec-pill ${e.flex?'ep-flex':'ep-strict'}">${e.flex?'FLEXIBLE':'STRICT'}</span></div><div class="ec-rule">${e.rule}</div></div></div>`).join('')}</div></div>`:'';
+
+  // waterfall
+  const wfH=`<div class="wf ani5"><div class="wf-hdr"><span>📊</span><h3>Prequalification Breakdown — Evaluation Path</h3></div>${steps.map((s,i)=>`<div class="ws"><div class="sb ${s.s}">${ico[s.s]||'·'}</div><div style="flex:1;min-width:0"><div class="wn">Step ${i+1} · ${s.n}</div><div class="wd">${s.d}</div>${s.note?`<div class="wnt">${s.note}</div>`:''}</div></div>`).join('')}</div>`;
+
+  document.getElementById('rcol').innerHTML=`
+    <div class="db ${cls} ani"><div class="db-lbl">Pre-Screen Result</div><div class="db-main">${decision}</div><div class="db-sub">${sub[cls]||''}</div>${routing?chips[routing]||'':''}</div>
+    ${optsH}${grH}${mH}${sfH}${scH}${svH}${spH}${ecH}${wfH}`;
+}
+
+// ════════════════════════════════════════════════════════════
+// UI HELPERS
+// ════════════════════════════════════════════════════════════
+function sf(){
+  const v=parseInt(document.getElementById('fico').value);
+  const el=document.getElementById('fv');
+  el.textContent=v;
+  el.className='sl-num '+(v<550?'danger':v<600?'warn':v<650?'':v>=650?'good':'');
+}
+function syncDP(){
+  const v=parseInt(document.getElementById('dpsl').value);
+  document.getElementById('dpv').textContent='$'+v.toLocaleString();
+  document.getElementById('dpman').value=v;
+  hDP(v);
+}
+function manDP(){
+  const v=parseInt(document.getElementById('dpman').value)||0;
+  document.getElementById('dpsl').value=Math.min(v,parseInt(document.getElementById('dpsl').max));
+  document.getElementById('dpv').textContent='$'+v.toLocaleString();
+  hDP(v);
+}
+function hDP(v){
+  const sale=getSale(); const pct=sale>0?((v/sale)*100).toFixed(0):0;
+  const el=document.getElementById('dph'); const p=document.getElementById('product').value;
+  if(p==='iphone'){el.style.color='var(--red)';el.textContent='⚠ iPhone: 25% minimum required';return;}
+  el.style.color='var(--steel)'; el.textContent=pct+'% of total sale price';
+}
+function syncTerm(){
+  const v=parseInt(document.getElementById('term').value);
+  document.getElementById('tv').textContent=v+' mo';
+  document.getElementById('term-manual').value='';
+  highlightTermChip(v);
+}
+function setTerm(v){
+  v=Math.max(1,Math.min(60,v));
+  document.getElementById('term').value=Math.min(v,36); // slider caps at 36
+  document.getElementById('tv').textContent=v+' mo';
+  document.getElementById('term-manual').value= v>36 ? v : '';
+  highlightTermChip(v);
+}
+function setTermManual(){
+  const raw=document.getElementById('term-manual').value;
+  if(!raw||raw===''){return;}
+  const v=Math.max(1,Math.min(60,parseInt(raw)||1));
+  document.getElementById('term').value=Math.min(v,36);
+  document.getElementById('tv').textContent=v+' mo';
+  highlightTermChip(v);
+}
+function getTermValue(){
+  // manual field takes priority if filled
+  const man=parseInt(document.getElementById('term-manual').value);
+  if(man&&man>0) return Math.min(60,man);
+  return parseInt(document.getElementById('term').value);
+}
+function highlightTermChip(v){
+  document.querySelectorAll('.term-chip').forEach(c=>c.classList.remove('active'));
+  const std=[3,6,9,12,15,18,21,24];
+  const idx=std.indexOf(v);
+  if(idx>=0) document.querySelectorAll('.term-chip')[idx].classList.add('active');
+}
+function updDP(){
+  const sale=getSale(); const m=Math.max(3000,Math.round(sale));
+  document.getElementById('dpsl').max=m;
+  hDP(parseInt(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0);
+}
+function getSale(){
+  const p=parseFloat(document.getElementById('purchase').value)||0;
+  const t=parseFloat(document.getElementById('tax').value)||0;
+  return p*(1+t/100);
+}
+function onProd(){hDP(parseInt(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0);}
+function updateEdge(){}
+function tog(k,v){
+  ST[k]=v;
+  const m={ver:['vy','vn','yes',''],def:['dy','dn','no','yes'],inq:['iy','in2','no','yes']};
+  const[yi,ni,yc,nc]=m[k];
+  document.getElementById(yi).className='tg '+(v?yc:'');
+  document.getElementById(ni).className='tg '+(!v?nc:'');
+}
+function resetAll(){
+  document.getElementById('fico').value=640;document.getElementById('fv').textContent='640';document.getElementById('fv').className='sl-num';
+  document.getElementById('income').value=3200;document.getElementById('purchase').value=1800;document.getElementById('tax').value=8.0;
+  document.getElementById('dpsl').value=300;document.getElementById('dpman').value='';document.getElementById('dpv').textContent='$300';
+  document.getElementById('dph').textContent='Adjust slider or enter below';document.getElementById('dph').style.color='var(--steel)';
+  document.getElementById('term').value=18;document.getElementById('tv').textContent='18 mo';document.getElementById('term-manual').value='';highlightTermChip(18);
+  document.getElementById('product').value='furniture';document.getElementById('tenure').value='18';
+  document.getElementById('debts').value=1100;document.getElementById('tradelines').value='moderate';
+  document.getElementById('emptype').value='employed';
+  tog('ver',true);tog('def',false);tog('inq',false);
+  document.getElementById('rcol').innerHTML='<div class="panel"><div class="idle"><div class="idle-ico">🏠</div><div class="idle-t">Ready to evaluate</div><div class="idle-s">Enter customer details on the left and press <strong>Run Pre-Screen</strong>.</div></div></div>';
+}
+</script>
+</body>
+</html>
