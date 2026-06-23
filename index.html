@@ -555,6 +555,89 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
 // ════════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+// MAIN ENGINE
+// ════════════════════════════════════════════════════════════
+async function calculate() {
+  // ── EDGE FUNCTION MIGRATION ──────────────────────────────────────────────
+  // Business logic (scoring, DP matrix, FICO gates, salvage, split, hard
+  // stops) now runs server-side in a Supabase Edge Function. The browser
+  // never downloads the decision rules. This function only collects the
+  // form inputs, posts them, and renders whatever comes back.
+  const fico       = parseInt(document.getElementById('fico').value);
+  const income     = parseFloat(document.getElementById('income').value)||0;
+  const purchase   = parseFloat(document.getElementById('purchase').value)||0;
+  const tax        = parseFloat(document.getElementById('tax').value)||0;
+  const tenure     = parseInt(document.getElementById('tenure').value);
+  const product    = document.getElementById('product').value;
+  const dpInput    = parseFloat(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0;
+  const termReq    = getTermValue();
+  const debts      = parseFloat(document.getElementById('debts').value)||0;
+  const tradelines = document.getElementById('tradelines').value;
+  const emptype    = document.getElementById('emptype').value;
+  const verified   = ST.ver;
+  const priorDef   = ST.def;
+  const inquiries  = ST.inq;
+
+  const payload = {
+    fico, income, purchase, tax, tenure, product,
+    dpInput, termReq, debts, tradelines, emptype,
+    verified, priorDef, inquiries
+  };
+
+  let result;
+  try {
+    const resp = await fetch('https://ecfxeebhtgkbsdeuiueb.supabase.co/functions/v1/credit-prescreen', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt',
+        'apikey': 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw new Error('Server returned ' + resp.status);
+    result = await resp.json();
+    if (result.error) throw new Error(result.error);
+  } catch (err) {
+    const resultsEl = document.getElementById('results');
+    if (resultsEl) {
+      resultsEl.innerHTML = '<div style="padding:24px;border:1px solid #e0b4b4;background:#fff0f0;border-radius:8px;color:#8a1f1f;font-family:Arial,sans-serif;">' +
+        '<strong>Unable to reach the credit pre-screen service.</strong><br>' +
+        'Please check your connection and try again. If this keeps happening, let your manager know.' +
+        '<br><span style="font-size:12px;color:#a05050;">(' + (err && err.message ? err.message : 'network error') + ')</span>' +
+        '</div>';
+    } else {
+      alert('Unable to reach the credit pre-screen service. Please check your connection and try again.');
+    }
+    return;
+  }
+
+  render(
+    result.decision, result.cls, result.steps, result.tier, result.score,
+    result.dp, result.dpPct, result.term, result.pmt, result.limit, result.apr,
+    result.sale, result.dpInput, result.salvage, result.split, result.routing,
+    result.dti, result.ltv, result.dtiOK, result.ltvOK, result.dpShort,
+    result.financed, result.reqDP, result.edgeCases, result.guardrailAlerts,
+    result.script
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   LEGACY LOCAL ENGINE — DISABLED, KEPT AS EMERGENCY FALLBACK ONLY
+   ════════════════════════════════════════════════════════════════════════
+   Business logic (constants + scoring/decision functions) now runs
+   server-side in a Supabase Edge Function. The browser no longer
+   downloads or executes the decision rules — everything in this comment
+   block is historical reference only, not live code.
+
+   This entire block (constants ST/PROD/TIER/DP_MAT/DP_BRK, all scoring
+   and decision functions, and the original calculate()) has been
+   superseded by the Edge Function call above (same logic, server-side).
+   Left here commented out in case the Edge Function is ever unreachable
+   for an extended period and a temporary local fallback is needed.
+   Do NOT uncomment and use both at the same time.
+
 const ST = { ver:true, def:false, inq:false };
 
 // ════════════════════════════════════════════════════════════
@@ -793,82 +876,8 @@ function genSalesScript(cls, decision, dp, monthly, term, salvage, split, fico, 
   return scripts[cls] || scripts.external;
 }
 
-// ════════════════════════════════════════════════════════════
-// MAIN ENGINE
-// ════════════════════════════════════════════════════════════
-async function calculate() {
-  // ── EDGE FUNCTION MIGRATION ──────────────────────────────────────────────
-  // Business logic (scoring, DP matrix, FICO gates, salvage, split, hard
-  // stops) now runs server-side in a Supabase Edge Function. The browser
-  // never downloads the decision rules. This function only collects the
-  // form inputs, posts them, and renders whatever comes back.
-  const fico       = parseInt(document.getElementById('fico').value);
-  const income     = parseFloat(document.getElementById('income').value)||0;
-  const purchase   = parseFloat(document.getElementById('purchase').value)||0;
-  const tax        = parseFloat(document.getElementById('tax').value)||0;
-  const tenure     = parseInt(document.getElementById('tenure').value);
-  const product    = document.getElementById('product').value;
-  const dpInput    = parseFloat(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0;
-  const termReq    = getTermValue();
-  const debts      = parseFloat(document.getElementById('debts').value)||0;
-  const tradelines = document.getElementById('tradelines').value;
-  const emptype    = document.getElementById('emptype').value;
-  const verified   = ST.ver;
-  const priorDef   = ST.def;
-  const inquiries  = ST.inq;
 
-  const payload = {
-    fico, income, purchase, tax, tenure, product,
-    dpInput, termReq, debts, tradelines, emptype,
-    verified, priorDef, inquiries
-  };
 
-  let result;
-  try {
-    const resp = await fetch('https://ecfxeebhtgkbsdeuiueb.supabase.co/functions/v1/credit-prescreen', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt',
-        'apikey': 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt'
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!resp.ok) throw new Error('Server returned ' + resp.status);
-    result = await resp.json();
-    if (result.error) throw new Error(result.error);
-  } catch (err) {
-    const resultsEl = document.getElementById('results');
-    if (resultsEl) {
-      resultsEl.innerHTML = '<div style="padding:24px;border:1px solid #e0b4b4;background:#fff0f0;border-radius:8px;color:#8a1f1f;font-family:Arial,sans-serif;">' +
-        '<strong>Unable to reach the credit pre-screen service.</strong><br>' +
-        'Please check your connection and try again. If this keeps happening, let your manager know.' +
-        '<br><span style="font-size:12px;color:#a05050;">(' + (err && err.message ? err.message : 'network error') + ')</span>' +
-        '</div>';
-    } else {
-      alert('Unable to reach the credit pre-screen service. Please check your connection and try again.');
-    }
-    return;
-  }
-
-  render(
-    result.decision, result.cls, result.steps, result.tier, result.score,
-    result.dp, result.dpPct, result.term, result.pmt, result.limit, result.apr,
-    result.sale, result.dpInput, result.salvage, result.split, result.routing,
-    result.dti, result.ltv, result.dtiOK, result.ltvOK, result.dpShort,
-    result.financed, result.reqDP, result.edgeCases, result.guardrailAlerts,
-    result.script
-  );
-}
-
-/* ════════════════════════════════════════════════════════════════════════
-   LEGACY LOCAL ENGINE — DISABLED, KEPT AS EMERGENCY FALLBACK ONLY
-   ════════════════════════════════════════════════════════════════════════
-   This is the original calculate() that ran scoring locally in the browser.
-   It has been superseded by the Edge Function above (same logic, server-
-   side). Left here commented out in case the Edge Function is ever
-   unreachable for an extended period and a temporary local fallback is
-   needed. Do NOT uncomment and use both at the same time.
 
    function calculate() {
      const fico     = parseInt(document.getElementById('fico').value);
@@ -1083,7 +1092,7 @@ async function calculate() {
      const sc=genSalesScript(cls,decision,finalDP||reqDP,finalPmt,finalTerm,salvage,split,fico,product,dpShortfall);
      render(decision,cls,steps,effTier,score,finalDP||reqDP,reqDPpct,finalTerm,finalPmt,finalLimit,finalAPR,sale,dpInput,salvage,split,routing,gr.dti,gr.ltv,gr.dtiOK,gr.ltvOK,dpShortfall,finalFinanced,reqDP,edgeCases,guardrailAlerts,sc);
    }
-   ════════════════════════════════════════════════════════════════════════ */
+
 
 function calcAPR(tier,product,verified,emptype){
   let a=TIER[tier].apr;
@@ -1091,6 +1100,7 @@ function calcAPR(tier,product,verified,emptype){
   if(!verified||emptype==='selfemployed')a+=3;
   return Math.min(a,42);
 }
+   ════════════════════════════════════════════════════════════════════════ */
 
 // ════════════════════════════════════════════════════════════
 // RENDER
