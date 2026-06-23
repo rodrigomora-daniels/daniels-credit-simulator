@@ -34,7 +34,7 @@ No label implies a final credit decision has been made.
   LIKELY SPLIT TENDER
     In-house cannot absorb the full amount alone. Recommended structure:
     Daniels finances its safe portion (capped by tier), a partner
-    (Synchrony/WF for FICO 600+, SNAP/Acima for FICO <600) covers the rest.
+    (Synchrony/WF for FICO 600+, SNAP / Koalafi for FICO <600) covers the rest.
 
   LIKELY EXTERNAL — [Partner Name]
     Profile does not qualify for in-house financing under current conditions.
@@ -44,7 +44,7 @@ No label implies a final credit decision has been made.
   NOT VIABLE — [Reason]
     Hard stop triggered (prior default, fraud flag, no income) OR FICO below
     550 (19.6–27.8% confirmed default rate). No in-house path available.
-    SNAP/Acima is the only option if FICO is 550–599 and hard stops are clear.
+    SNAP / Koalafi is the only option if FICO is 550–599 and hard stops are clear.
 
 --------------------------------------------------------------------------------
 2. THE $1,200 THRESHOLD IN PRE-SCREEN CONTEXT
@@ -574,8 +574,8 @@ const PROD = {
 // TIER CONFIG (guardrails included)
 // ════════════════════════════════════════════════════════════
 const TIER = {
-  A:{maxTerm:36, maxDTI:45, maxLTV:90, apr:29, limitCap:5000, limitMult:2.0, pmtMin:100, pmtRealMin:120, maxDP:45},
-  B:{maxTerm:24, maxDTI:40, maxLTV:85, apr:33, limitCap:3500, limitMult:1.5, pmtMin:100, pmtRealMin:120, maxDP:45},
+  A:{maxTerm:24, maxDTI:45, maxLTV:90, apr:29, limitCap:5000, limitMult:2.0, pmtMin:100, pmtRealMin:120, maxDP:45},
+  B:{maxTerm:18, maxDTI:40, maxLTV:85, apr:33, limitCap:3500, limitMult:1.5, pmtMin:100, pmtRealMin:120, maxDP:45},
   C:{maxTerm:12, maxDTI:35, maxLTV:80, apr:37, limitCap:1500, limitMult:1.5, pmtMin:100, pmtRealMin:100, maxDP:40},
 };
 
@@ -730,7 +730,7 @@ function buildSplit(tier, sale, dpInput, fico, income, product) {
   if (danielsAmt<300) return null;
   const extAmt = Math.max(0, sale-dpInput-danielsAmt);
   if (extAmt<150) return null; // also lower external minimum for consistency
-  return {danielsAmt:Math.round(danielsAmt), extAmt:Math.round(extAmt), partner:fico<600?'SNAP / Acima':'Synchrony / WF'};
+  return {danielsAmt:Math.round(danielsAmt), extAmt:Math.round(extAmt), partner:fico<600?'SNAP / Koalafi':'Synchrony / WF'};
 }
 
 // ════════════════════════════════════════════════════════════
@@ -776,7 +776,7 @@ function genSalesScript(cls, decision, dp, monthly, term, salvage, split, fico, 
         ? `"Based on your profile, one of our financing partners would likely be the best fit for this deal. They work with a wide range of situations and it's a straightforward process. Would you like me to point you in that direction?"`
         : `"For a deal like this, our financing partner Synchrony is likely the strongest option. They have competitive programs and the process is usually fast. Interested in exploring that?"`,
       steps: [
-        {n:1, t:`Likely path: ${fico<600?'SNAP / Acima':'Synchrony / WF'}`, d:`Based on this pre-screen, an external financing partner is the most likely fit. We'd refer you to their program for a full application.`},
+        {n:1, t:`Likely path: ${fico<600?'SNAP / Koalafi':'Synchrony / WF'}`, d:`Based on this pre-screen, an external financing partner is the most likely fit. We'd refer you to their program for a full application.`},
         {n:2, t:'Set the right expectation', d:"Let the customer know this is a partner program — separate from our in-house financing, but still a good option."},
         {n:3, t:'Note the pre-screen result', d:'Record this outcome so the approver has context when the formal application comes in.'},
       ]
@@ -796,219 +796,294 @@ function genSalesScript(cls, decision, dp, monthly, term, salvage, split, fico, 
 // ════════════════════════════════════════════════════════════
 // MAIN ENGINE
 // ════════════════════════════════════════════════════════════
-function calculate() {
-  const fico     = parseInt(document.getElementById('fico').value);
-  const income   = parseFloat(document.getElementById('income').value)||0;
-  const purchase = parseFloat(document.getElementById('purchase').value)||0;
-  const tax      = parseFloat(document.getElementById('tax').value)||0;
-  const sale     = purchase*(1+tax/100);
-  const tenure   = parseInt(document.getElementById('tenure').value);
-  const product  = document.getElementById('product').value;
-  const dpInput  = parseFloat(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0;
-  const termReq  = getTermValue();
-  const debts    = parseFloat(document.getElementById('debts').value)||0;
+async function calculate() {
+  // ── EDGE FUNCTION MIGRATION ──────────────────────────────────────────────
+  // Business logic (scoring, DP matrix, FICO gates, salvage, split, hard
+  // stops) now runs server-side in a Supabase Edge Function. The browser
+  // never downloads the decision rules. This function only collects the
+  // form inputs, posts them, and renders whatever comes back.
+  const fico       = parseInt(document.getElementById('fico').value);
+  const income     = parseFloat(document.getElementById('income').value)||0;
+  const purchase   = parseFloat(document.getElementById('purchase').value)||0;
+  const tax        = parseFloat(document.getElementById('tax').value)||0;
+  const tenure     = parseInt(document.getElementById('tenure').value);
+  const product    = document.getElementById('product').value;
+  const dpInput    = parseFloat(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0;
+  const termReq    = getTermValue();
+  const debts      = parseFloat(document.getElementById('debts').value)||0;
   const tradelines = document.getElementById('tradelines').value;
-  const emptype  = document.getElementById('emptype').value;
-  const {ver:verified, def:priorDef, inq:inquiries} = ST;
-  const prod = PROD[product]; const isI = product==='iphone';
-  const fr = fico>=550&&fico<600;
+  const emptype    = document.getElementById('emptype').value;
+  const verified   = ST.ver;
+  const priorDef   = ST.def;
+  const inquiries  = ST.inq;
 
-  // edge case detection
-  const edgeCases = detectEdgeCase(fico, 0, tradelines, tenure, verified, emptype, income, dpInput, sale);
+  const payload = {
+    fico, income, purchase, tax, tenure, product,
+    dpInput, termReq, debts, tradelines, emptype,
+    verified, priorDef, inquiries
+  };
 
-  const steps = []; let decision=null, cls='neutral', routing=null;
-  let finalDP=dpInput, finalTerm=termReq, finalPmt=0, finalFinanced=0;
-  let finalTier=null, finalLimit=0, finalAPR=0;
-  let salvage=null, split=null, hardStop=false;
-  const guardrailAlerts = [];
-
-  // ── PRIORITY 1: HARD STOPS ──────────────────────────────
-  let hs = null;
-  if (priorDef) hs='Prior Daniels default on file (last 2 years).';
-  else if (inquiries) hs='5+ credit inquiries in last 12 months.';
-  else if (income<=0) hs='No income entered — cannot evaluate.';
-  else if (emptype==='none') hs='No verifiable income source. Cannot approve.';
-
-  if (hs) {
-    steps.push({s:'fail',n:'Hard Stops',d:'HARD STOP — Cannot process',note:hs});
-    ['FICO Gate','Score & Tier','Deal Context','Product Risk','Down Payment','Term & Payment','Structure Check','Likely Path'].forEach(n=>steps.push({s:'skip',n,d:'Skipped',note:''}));
-    decision='NOT VIABLE — Hard Stop'; cls='declined'; hardStop=true; routing=fico<550?'snap':'external';
-    render(decision,cls,steps,null,null,null,null,null,null,null,null,sale,dpInput,null,null,routing,null,null,null,null,0,0,0,edgeCases,guardrailAlerts,genSalesScript('declined',decision,0,0,0,null,null,fico,product,0));
-    return;
-  }
-  steps.push({s:'pass',n:'Hard Stops',d:'Clear — no disqualifying flags',note:'No prior default, no fraud flags, no excessive inquiries.'});
-
-  // ── FICO GATE ───────────────────────────────────────────
-  // CALIBRATION: For FICO <550, attempt limited structure (high DP + split) before routing to SNAP.
-  // Hard exit only if structure evaluation also fails.
-  const subPrime = fico < 550;
-  if (subPrime) {
-    steps.push({s:'warn',n:'FICO Gate',d:'FICO '+fico+' — In-house not generally viable',note:'19.6–27.8% default rate at this level. Evaluating limited structure options (high DP / split) before routing externally.'});
-    // Allow scoring to continue — engine will attempt structure/split and only exit to SNAP if both fail
-  } else if (fr) {
-    steps.push({s:'warn',n:'FICO Gate',d:'FICO '+fico+' — Restricted Path (550–599)',note:'8.6% default. Safe products only, max $1,500, $400 DP min, no tenure relief.'});
-  } else {
-    const label = fico<650?'Standard (600–649)':fico<700?'Normal (650–699)':'Preferred (700+)';
-    const rate  = fico<650?'3.4%':fico<700?'1.7%':'0.3%';
-    steps.push({s:'pass',n:'FICO Gate',d:'FICO '+fico+' — '+label,note:rate+' default rate.'});
-  }
-
-  // ── SCORE & TIER ────────────────────────────────────────
-  const score = calcScore(fico, income, verified, tenure, tradelines);
-  const tier = getTier(score);
-  // CALIBRATION: Self-employed gets full scoring result — no longer capped at Tier B.
-  // They are excluded from streamlined path (correct) but NOT penalized in tier assignment.
-  // APR adder for self-employed still applies in calcAPR.
-  const effTier = tier;
-  finalTier=effTier; finalAPR=calcAPR(effTier,product,verified,emptype); finalLimit=Math.min(TIER[effTier].limitCap, income*TIER[effTier].limitMult);
-  steps.push({s:'info',n:'Score & Tier',d:'Tier '+effTier+'  (score '+score+'/100)'+(emptype==='selfemployed'?' — self-employed: full scoring applied, streamlined path not available':''),note:'A≥75 · B 60–74 · C<60. FICO, trade lines, income, tenure.'});
-
-  // ── DEAL SIZE CONTEXT (internal signal only — not a gate) ──────────────────
-  // $1,200 is used here as a context signal to inform the recommendation,
-  // NOT as a threshold that blocks or changes the evaluation path.
-  // This simulator is a prequalification tool — all deal sizes are evaluated fully.
-  const projFinanced = Math.max(0, sale - dpInput);
-  const smallDeal    = projFinanced < 1200;  // context flag — used for labeling only
-  const dealContext  = smallDeal
-    ? 'Small deal (financed < $1,200) — streamlined path likely'
-    : 'Standard deal — full evaluation applied';
-
-  // ── STREAMLINED PATH: FICO 660+, safe product, verified income, small deal ──
-  // All hard risk rules are still enforced. This is a fast-track label, not a bypass.
-  const azOK = fico>=660 && sale<=1200 && verified && prod.safe && emptype!=='selfemployed';
-
-  if (azOK) {
-    steps.push({s:'pass',n:'Streamlined Path',d:'STREAMLINED — All fast-track conditions met',note:'FICO 660+, verified income, safe product, small deal. Most likely outcome: in-house, minimal friction.'});
-    decision='LIKELY IN-HOUSE — Streamlined'; cls='approved'; routing='inhouse';
-    const dpAZ=Math.max(200,Math.round(getBaseDPpct(effTier,sale)/100*sale));
-    const termAZ=Math.min(termReq,TIER[effTier].maxTerm); const finAZ=Math.max(0,sale-dpAZ);
-    const pmtAZ=Math.round(finAZ/Math.max(1,termAZ));
-    ['Product Risk','Down Payment','Term & Payment','Structure Check'].forEach(n=>steps.push({s:'skip',n,d:'Skipped — streamlined path applies',note:''}));
-    steps.push({s:'pass',n:'Likely Path',d:'In-house financing — high confidence this will qualify',note:dealContext});
-    const sc=genSalesScript('approved',decision,dpAZ,pmtAZ,termAZ,null,null,fico,product,0);
-    render(decision,cls,steps,effTier,score,dpAZ,getBaseDPpct(effTier,sale),termAZ,pmtAZ,finalLimit,finalAPR,sale,dpAZ,null,null,routing,null,null,null,null,0,0,0,edgeCases,guardrailAlerts,sc);
-    return;
-  }
-
-  // Not streamlined — proceed to full evaluation. Note deal context.
-  // Do NOT mention $1,200 as a failure reason. It is not a gate.
-  const azNote = [];
-  if(fico<660) azNote.push('FICO '+fico+' (660 preferred for streamlined)');
-  if(!verified) azNote.push('Income not verified');
-  if(!prod.safe) azNote.push(prod.label+' — full product evaluation required');
-  if(emptype==='selfemployed') azNote.push('Self-employed — full scoring applied');
-  steps.push({s:'info',n:'Deal Context',d:dealContext,note: azNote.length>0 ? 'Full evaluation: '+azNote.join(' · ') : 'Proceeding to full evaluation.'});
-
-  // ── PRODUCT RISK ────────────────────────────────────────
-  let prodBlock=false;
-  // CALIBRATION: Sub-prime (FICO <550) + safe product → allow limited structure attempt
-  // instead of hard blocking. Exposure capped at $800 financed. High-risk products still blocked.
-  const subPrimeSafeOverride = subPrime && prod.safe;
-  if (subPrimeSafeOverride) {
-    const subCapLabel = (product==='furniture'||product==='mattress')
-      ? (verified ? '$1,200' : '$800 (unverified income — verified required for $1,200)')
-      : '$600';
-    steps.push({s:'warn',n:'Product Risk',d:prod.label+' — Limited in-house possible (sub-prime)',note:`FICO below 550: safe product path only. Exposure cap: ${subCapLabel} financed. Elevated DP required. Term limited to 6 months.`});
-  } else if (fico<prod.minFico) {
-    prodBlock=true;
-    steps.push({s:'fail',n:'Product Risk',d:prod.label+' — FICO too low',note:prod.label+' requires FICO ≥ '+prod.minFico+'. FICO '+fico+'.  '+(prod.flex?'Salvage possible with higher DP.':'Hard rule — no override.')});
-  } else if (fr&&!prod.safe) {
-    prodBlock=true;
-    steps.push({s:'fail',n:'Product Risk',d:prod.label+' — Not allowed on restricted path',note:'FICO 550–599 restricted to safe products only.'});
-  } else {
-    steps.push({s:'pass',n:'Product Risk',d:prod.label+(prod.adj>0?' (+'+prod.adj+'% DP)':' (no DP adj)'),note:isI?'⚠ iPhone: 25% DP min, max $1,000, no tenure relief, no override.':'Product approved for in-house evaluation.'});
-  }
-
-  // ── DOWN PAYMENT ────────────────────────────────────────
-  const dpCalc=calcDP(effTier,sale,product,fico,tenure,verified);
-  const reqDP=dpCalc.dollar; const reqDPpct=dpCalc.pct;
-  const dpOK=dpInput>=reqDP; const dpShortfall=Math.max(0,reqDP-dpInput);
-  let dpNote=dpOK?`DP met. Collect $${reqDP.toLocaleString()} cash/check before signing.`:`Shortfall $${dpShortfall.toLocaleString()}. Need $${reqDP.toLocaleString()} down.`;
-  // TENURE RELIEF DISPLAY RULE: show ONLY when relief was actually applied (fico>=600).
-  // When fico<600, relief=0 by definition. Show nothing — no "−0% applied" label,
-  // no mention of the concept. A labeled zero invites floor negotiation.
-  if(dpCalc.relief>0)dpNote+=` Loyalty relief −${dpCalc.relief}% applied (FICO ≥600 eligible).`;
-  if(dpCalc.fr)dpNote+=` $400 floor applied (FICO 550–599 restricted path).`;
-  if(isI)dpNote+=` iPhone 25% minimum — no relief, no override.`;
-  steps.push({s:dpOK?'pass':'warn',n:'Down Payment',d:`Required: $${reqDP.toLocaleString()} (${reqDPpct.toFixed(0)}%) · Customer has: $${dpInput.toLocaleString()}`,note:dpNote});
-
-  // ── TERM & PAYMENT ──────────────────────────────────────
-  const maxT = prod.maxTermOverride ? Math.min(TIER[effTier].maxTerm,prod.maxTermOverride) : TIER[effTier].maxTerm;
-  finalTerm=Math.min(termReq,maxT);
-  finalFinanced=Math.max(0,sale-Math.max(dpInput,reqDP));
-  finalPmt=Math.round(finalFinanced/finalTerm);
-  const gr=checkGuardrails(effTier,product,sale,Math.max(dpInput,reqDP),finalTerm,finalPmt,income,debts,finalFinanced);
-  gr.warnings.forEach(w=>guardrailAlerts.push(w));
-  let termStat=(!gr.dtiOK||!gr.ltvOK||finalPmt<TIER[effTier].pmtRealMin)?'warn':'pass';
-  steps.push({s:termStat,n:'Term & Payment',d:`Term: ${finalTerm}mo · Pmt: $${finalPmt}/mo · DTI: ${gr.dti.toFixed(0)}%`,note:`APR: ${finalAPR}% · LTV: ${gr.ltv.toFixed(0)}% · Max DTI: ${TIER[effTier].maxDTI}% · Max term: ${maxT}mo`});
-  steps.push({s:finalFinanced<=finalLimit?'pass':'warn',n:'Credit Limit',d:`Limit $${Math.round(finalLimit).toLocaleString()} · Financed $${Math.round(finalFinanced).toLocaleString()}`,note:finalFinanced<=finalLimit?'Within limit.':'Exceeds limit — increase DP to reduce financed amount.'});
-
-  // ── PRIORITY 2: SALVAGE ─────────────────────────────────
-  // CALIBRATION: Run structure check for ALL cases where deal is not already clear.
-  // Previously skipped when prodBlock=true — this caused too-early external routing.
-  // Sub-prime FICO also now evaluated here (no early exit at FICO gate).
-  const allClear=!prodBlock&&dpOK&&gr.dtiOK&&gr.ltvOK&&finalFinanced<=finalLimit&&finalPmt>=TIER[effTier].pmtRealMin;
-  const shouldTryStructure = !allClear && (prod.flex || fr || subPrime || subPrimeSafeOverride);
-  if (shouldTryStructure) {
-    const sv=findSalvage(effTier,sale,product,fico,tenure,verified,income,debts);
-    if(sv){salvage=sv;steps.push({s:'sv',n:'Structure Check',d:'✦ STRUCTURE FOUND — in-house path likely viable with adjustments',note:`DP $${sv.dp.toLocaleString()} · ${sv.term}mo · $${sv.pmt}/mo · DTI ${sv.dti}%`});}
-    else {
-      // PRIORITY 3: SPLIT TENDER — always attempt before routing external
-      const sp=buildSplit(effTier,sale,Math.max(dpInput,reqDP*0.5),fico,income,product);
-      if(sp){split=sp;steps.push({s:'sv',n:'Structure Check',d:'✦ SPLIT TENDER — partial in-house possible',note:`Daniels: $${sp.danielsAmt.toLocaleString()} · ${sp.partner}: $${sp.extAmt.toLocaleString()}`});}
-      else steps.push({s:'warn',n:'Structure Check',d:'No viable in-house structure found — external path recommended',note:'Salvage and split both evaluated. Route to best-fit external partner.'});
-    }
-  } else if (!allClear) {
-    // CALIBRATION: For ALL remaining non-clear cases (strict products, any edge case),
-    // ALWAYS try split before external. Split is a natural path, not a last resort.
-    const sp=buildSplit(effTier,sale,Math.max(dpInput,reqDP*0.5),fico,income,product);
-    if(sp){split=sp;steps.push({s:'sv',n:'Structure Check',d:'✦ SPLIT TENDER — partial in-house possible',note:`Daniels: $${sp.danielsAmt.toLocaleString()} · ${sp.partner}: $${sp.extAmt.toLocaleString()}`});}
-    else steps.push({s:'warn',n:'Structure Check',d:'No viable structure found — external path recommended',note:'Full in-house and split both evaluated. Route to external financing.'});
-  } else if(allClear) {
-    steps.push({s:'skip',n:'Structure Check',d:'Not needed — deal pre-qualifies as-is',note:''});
-  }
-
-  // ── PRIORITY 4: LIKELY PATH & RECOMMENDATION ────────────────────────────────
-  // CALIBRATION: Prefer structure over rejection.
-  // 550–599 in-house when allClear. Self-employed in-house when allClear.
-  // Tier C tries structure before external. Sub-prime routes SNAP only after structure fails.
-  if (allClear) {
-    if (subPrime) {
-      // Sub-prime allClear means DP + structure met — in-house viable with tight limits
-      decision='LIKELY IN-HOUSE — With Adjustments'; cls='adjust'; routing='inhouse';
-      steps.push({s:'pass',n:'Likely Path',d:'In-house financing — viable under tight structure',note:'FICO below 550 but deal structure clears all guardrails. High DP compensates for risk level. '+dealContext});
-    } else if ((effTier==='A'||effTier==='B')&&fico>=550) {
-      // CALIBRATION: 550+ in-house when structure passes — removed the fico>=600 gate here
-      // 550–599 restricted path already enforced at product/DP level
-      decision='LIKELY IN-HOUSE'; cls='approved'; routing='inhouse';
-      steps.push({s:'pass',n:'Likely Path',d:'In-house financing — high confidence this will qualify',note:'All prequalification criteria met. '+dealContext});
-    } else if (effTier==='C') {
-      // Tier C can still go in-house if structure passes — don't auto-route external
-      decision='LIKELY IN-HOUSE — With Adjustments'; cls='adjust'; routing='inhouse';
-      steps.push({s:'pass',n:'Likely Path',d:'In-house financing — viable with tight Tier C structure',note:'Tier C: max 12 months, $1,500 cap. Structure clears. '+dealContext});
+  let result;
+  try {
+    const resp = await fetch('https://ecfxeebhtgkbsdeuiueb.supabase.co/functions/v1/credit-prescreen', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt',
+        'apikey': 'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw new Error('Server returned ' + resp.status);
+    result = await resp.json();
+    if (result.error) throw new Error(result.error);
+  } catch (err) {
+    const resultsEl = document.getElementById('results');
+    if (resultsEl) {
+      resultsEl.innerHTML = '<div style="padding:24px;border:1px solid #e0b4b4;background:#fff0f0;border-radius:8px;color:#8a1f1f;font-family:Arial,sans-serif;">' +
+        '<strong>Unable to reach the credit pre-screen service.</strong><br>' +
+        'Please check your connection and try again. If this keeps happening, let your manager know.' +
+        '<br><span style="font-size:12px;color:#a05050;">(' + (err && err.message ? err.message : 'network error') + ')</span>' +
+        '</div>';
     } else {
-      decision='LIKELY IN-HOUSE'; cls='approved'; routing='inhouse';
-      steps.push({s:'pass',n:'Likely Path',d:'In-house financing — high confidence this will qualify',note:dealContext});
+      alert('Unable to reach the credit pre-screen service. Please check your connection and try again.');
     }
-  } else if(salvage) {
-    decision='LIKELY IN-HOUSE — With Adjustments'; cls='adjust'; routing='inhouse';
-    finalDP=salvage.dp; finalTerm=salvage.term; finalPmt=salvage.pmt; finalFinanced=salvage.financed;
-    steps.push({s:'pass',n:'Likely Path',d:'In-house financing — viable with adjusted structure',note:`Raise DP to $${salvage.dp.toLocaleString()}, set term ${salvage.term}mo. This is the most likely viable in-house structure.`});
-  } else if(split) {
-    decision='LIKELY SPLIT TENDER'; cls='split'; routing='split';
-    steps.push({s:'info',n:'Likely Path',d:'SPLIT — In-house + External most likely',note:`Daniels: $${split.danielsAmt.toLocaleString()} · ${split.partner}: $${split.extAmt.toLocaleString()}`});
-  } else {
-    // Only reach here after salvage AND split both failed
-    // CALIBRATION: Correct partner routing — sub-600 never goes to prime lenders
-    const ep = fico < 600 ? 'SNAP / Acima' : 'Synchrony / WF';
-    routing = fico < 600 ? 'snap' : 'external';
-    decision='LIKELY EXTERNAL — '+ep; cls='external';
-    steps.push({s:'warn',n:'Likely Path',d:'EXTERNAL — '+ep+' most likely',note: subPrime ? 'FICO below 550 — structure options exhausted. SNAP / Acima is the most suitable path.' : fico<600 ? 'FICO 550–599 — structure not viable under current terms. SNAP / Acima recommended.' : 'External financing is the recommended path based on this profile.'});
+    return;
   }
 
-  const sc=genSalesScript(cls,decision,finalDP||reqDP,finalPmt,finalTerm,salvage,split,fico,product,dpShortfall);
-  render(decision,cls,steps,effTier,score,finalDP||reqDP,reqDPpct,finalTerm,finalPmt,finalLimit,finalAPR,sale,dpInput,salvage,split,routing,gr.dti,gr.ltv,gr.dtiOK,gr.ltvOK,dpShortfall,finalFinanced,reqDP,edgeCases,guardrailAlerts,sc);
+  render(
+    result.decision, result.cls, result.steps, result.tier, result.score,
+    result.dp, result.dpPct, result.term, result.pmt, result.limit, result.apr,
+    result.sale, result.dpInput, result.salvage, result.split, result.routing,
+    result.dti, result.ltv, result.dtiOK, result.ltvOK, result.dpShort,
+    result.financed, result.reqDP, result.edgeCases, result.guardrailAlerts,
+    result.script
+  );
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   LEGACY LOCAL ENGINE — DISABLED, KEPT AS EMERGENCY FALLBACK ONLY
+   ════════════════════════════════════════════════════════════════════════
+   This is the original calculate() that ran scoring locally in the browser.
+   It has been superseded by the Edge Function above (same logic, server-
+   side). Left here commented out in case the Edge Function is ever
+   unreachable for an extended period and a temporary local fallback is
+   needed. Do NOT uncomment and use both at the same time.
+
+   function calculate() {
+     const fico     = parseInt(document.getElementById('fico').value);
+     const income   = parseFloat(document.getElementById('income').value)||0;
+     const purchase = parseFloat(document.getElementById('purchase').value)||0;
+     const tax      = parseFloat(document.getElementById('tax').value)||0;
+     const sale     = purchase*(1+tax/100);
+     const tenure   = parseInt(document.getElementById('tenure').value);
+     const product  = document.getElementById('product').value;
+     const dpInput  = parseFloat(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0;
+     const termReq  = getTermValue();
+     const debts    = parseFloat(document.getElementById('debts').value)||0;
+     const tradelines = document.getElementById('tradelines').value;
+     const emptype  = document.getElementById('emptype').value;
+     const {ver:verified, def:priorDef, inq:inquiries} = ST;
+     const prod = PROD[product]; const isI = product==='iphone';
+     const fr = fico>=550&&fico<600;
+
+     // edge case detection
+     const edgeCases = detectEdgeCase(fico, 0, tradelines, tenure, verified, emptype, income, dpInput, sale);
+
+     const steps = []; let decision=null, cls='neutral', routing=null;
+     let finalDP=dpInput, finalTerm=termReq, finalPmt=0, finalFinanced=0;
+     let finalTier=null, finalLimit=0, finalAPR=0;
+     let salvage=null, split=null, hardStop=false;
+     const guardrailAlerts = [];
+
+     // ── PRIORITY 1: HARD STOPS ──────────────────────────────
+     let hs = null;
+     if (priorDef) hs='Prior Daniels default on file (last 2 years).';
+     else if (inquiries) hs='5+ credit inquiries in last 12 months.';
+     else if (income<=0) hs='No income entered — cannot evaluate.';
+     else if (emptype==='none') hs='No verifiable income source. Cannot approve.';
+
+     if (hs) {
+       steps.push({s:'fail',n:'Hard Stops',d:'HARD STOP — Cannot process',note:hs});
+       ['FICO Gate','Score & Tier','Deal Context','Product Risk','Down Payment','Term & Payment','Structure Check','Likely Path'].forEach(n=>steps.push({s:'skip',n,d:'Skipped',note:''}));
+       decision='NOT VIABLE — Hard Stop'; cls='declined'; hardStop=true; routing=fico<550?'snap':'external';
+       render(decision,cls,steps,null,null,null,null,null,null,null,null,sale,dpInput,null,null,routing,null,null,null,null,0,0,0,edgeCases,guardrailAlerts,genSalesScript('declined',decision,0,0,0,null,null,fico,product,0));
+       return;
+     }
+     steps.push({s:'pass',n:'Hard Stops',d:'Clear — no disqualifying flags',note:'No prior default, no fraud flags, no excessive inquiries.'});
+
+     // ── FICO GATE ───────────────────────────────────────────
+     // CALIBRATION: For FICO <550, attempt limited structure (high DP + split) before routing to SNAP.
+     // Hard exit only if structure evaluation also fails.
+     const subPrime = fico < 550;
+     if (subPrime) {
+       steps.push({s:'warn',n:'FICO Gate',d:'FICO '+fico+' — In-house not generally viable',note:'19.6–27.8% default rate at this level. Evaluating limited structure options (high DP / split) before routing externally.'});
+       // Allow scoring to continue — engine will attempt structure/split and only exit to SNAP if both fail
+     } else if (fr) {
+       steps.push({s:'warn',n:'FICO Gate',d:'FICO '+fico+' — Restricted Path (550–599)',note:'8.6% default. Safe products only, max $1,500, $400 DP min, no tenure relief.'});
+     } else {
+       const label = fico<650?'Standard (600–649)':fico<700?'Normal (650–699)':'Preferred (700+)';
+       const rate  = fico<650?'3.4%':fico<700?'1.7%':'0.3%';
+       steps.push({s:'pass',n:'FICO Gate',d:'FICO '+fico+' — '+label,note:rate+' default rate.'});
+     }
+
+     // ── SCORE & TIER ────────────────────────────────────────
+     const score = calcScore(fico, income, verified, tenure, tradelines);
+     const tier = getTier(score);
+     // CALIBRATION: Self-employed gets full scoring result — no longer capped at Tier B.
+     // They are excluded from streamlined path (correct) but NOT penalized in tier assignment.
+     // APR adder for self-employed still applies in calcAPR.
+     const effTier = tier;
+     finalTier=effTier; finalAPR=calcAPR(effTier,product,verified,emptype); finalLimit=Math.min(TIER[effTier].limitCap, income*TIER[effTier].limitMult);
+     steps.push({s:'info',n:'Score & Tier',d:'Tier '+effTier+'  (score '+score+'/100)'+(emptype==='selfemployed'?' — self-employed: full scoring applied, streamlined path not available':''),note:'A≥75 · B 60–74 · C<60. FICO, trade lines, income, tenure.'});
+
+     // ── DEAL SIZE CONTEXT (internal signal only — not a gate) ──────────────────
+     // $1,200 is used here as a context signal to inform the recommendation,
+     // NOT as a threshold that blocks or changes the evaluation path.
+     // This simulator is a prequalification tool — all deal sizes are evaluated fully.
+     const projFinanced = Math.max(0, sale - dpInput);
+     const smallDeal    = projFinanced < 1200;  // context flag — used for labeling only
+     const dealContext  = smallDeal
+       ? 'Small deal (financed < $1,200) — streamlined path likely'
+       : 'Standard deal — full evaluation applied';
+
+     // ── STREAMLINED PATH: FICO 660+, safe product, verified income, small deal ──
+     // All hard risk rules are still enforced. This is a fast-track label, not a bypass.
+     const azOK = fico>=660 && sale<=1200 && verified && prod.safe && emptype!=='selfemployed';
+
+     if (azOK) {
+       steps.push({s:'pass',n:'Streamlined Path',d:'STREAMLINED — All fast-track conditions met',note:'FICO 660+, verified income, safe product, small deal. Most likely outcome: in-house, minimal friction.'});
+       decision='LIKELY IN-HOUSE — Streamlined'; cls='approved'; routing='inhouse';
+       const dpAZ=Math.max(200,Math.round(getBaseDPpct(effTier,sale)/100*sale));
+       const termAZ=Math.min(termReq,TIER[effTier].maxTerm); const finAZ=Math.max(0,sale-dpAZ);
+       const pmtAZ=Math.round(finAZ/Math.max(1,termAZ));
+       ['Product Risk','Down Payment','Term & Payment','Structure Check'].forEach(n=>steps.push({s:'skip',n,d:'Skipped — streamlined path applies',note:''}));
+       steps.push({s:'pass',n:'Likely Path',d:'In-house financing — high confidence this will qualify',note:dealContext});
+       const sc=genSalesScript('approved',decision,dpAZ,pmtAZ,termAZ,null,null,fico,product,0);
+       render(decision,cls,steps,effTier,score,dpAZ,getBaseDPpct(effTier,sale),termAZ,pmtAZ,finalLimit,finalAPR,sale,dpAZ,null,null,routing,null,null,null,null,0,0,0,edgeCases,guardrailAlerts,sc);
+       return;
+     }
+
+     // Not streamlined — proceed to full evaluation. Note deal context.
+     // Do NOT mention $1,200 as a failure reason. It is not a gate.
+     const azNote = [];
+     if(fico<660) azNote.push('FICO '+fico+' (660 preferred for streamlined)');
+     if(!verified) azNote.push('Income not verified');
+     if(!prod.safe) azNote.push(prod.label+' — full product evaluation required');
+     if(emptype==='selfemployed') azNote.push('Self-employed — full scoring applied');
+     steps.push({s:'info',n:'Deal Context',d:dealContext,note: azNote.length>0 ? 'Full evaluation: '+azNote.join(' · ') : 'Proceeding to full evaluation.'});
+
+     // ── PRODUCT RISK ────────────────────────────────────────
+     let prodBlock=false;
+     // CALIBRATION: Sub-prime (FICO <550) + safe product → allow limited structure attempt
+     // instead of hard blocking. Exposure capped at $800 financed. High-risk products still blocked.
+     const subPrimeSafeOverride = subPrime && prod.safe;
+     if (subPrimeSafeOverride) {
+       const subCapLabel = (product==='furniture'||product==='mattress')
+         ? (verified ? '$1,200' : '$800 (unverified income — verified required for $1,200)')
+         : '$600';
+       steps.push({s:'warn',n:'Product Risk',d:prod.label+' — Limited in-house possible (sub-prime)',note:`FICO below 550: safe product path only. Exposure cap: ${subCapLabel} financed. Elevated DP required. Term limited to 6 months.`});
+     } else if (fico<prod.minFico) {
+       prodBlock=true;
+       steps.push({s:'fail',n:'Product Risk',d:prod.label+' — FICO too low',note:prod.label+' requires FICO ≥ '+prod.minFico+'. FICO '+fico+'.  '+(prod.flex?'Salvage possible with higher DP.':'Hard rule — no override.')});
+     } else if (fr&&!prod.safe) {
+       prodBlock=true;
+       steps.push({s:'fail',n:'Product Risk',d:prod.label+' — Not allowed on restricted path',note:'FICO 550–599 restricted to safe products only.'});
+     } else {
+       steps.push({s:'pass',n:'Product Risk',d:prod.label+(prod.adj>0?' (+'+prod.adj+'% DP)':' (no DP adj)'),note:isI?'⚠ iPhone: 25% DP min, max $1,000, no tenure relief, no override.':'Product approved for in-house evaluation.'});
+     }
+
+     // ── DOWN PAYMENT ────────────────────────────────────────
+     const dpCalc=calcDP(effTier,sale,product,fico,tenure,verified);
+     const reqDP=dpCalc.dollar; const reqDPpct=dpCalc.pct;
+     const dpOK=dpInput>=reqDP; const dpShortfall=Math.max(0,reqDP-dpInput);
+     let dpNote=dpOK?`DP met. Collect $${reqDP.toLocaleString()} cash/check before signing.`:`Shortfall $${dpShortfall.toLocaleString()}. Need $${reqDP.toLocaleString()} down.`;
+     // TENURE RELIEF DISPLAY RULE: show ONLY when relief was actually applied (fico>=600).
+     // When fico<600, relief=0 by definition. Show nothing — no "−0% applied" label,
+     // no mention of the concept. A labeled zero invites floor negotiation.
+     if(dpCalc.relief>0)dpNote+=` Loyalty relief −${dpCalc.relief}% applied (FICO ≥600 eligible).`;
+     if(dpCalc.fr)dpNote+=` $400 floor applied (FICO 550–599 restricted path).`;
+     if(isI)dpNote+=` iPhone 25% minimum — no relief, no override.`;
+     steps.push({s:dpOK?'pass':'warn',n:'Down Payment',d:`Required: $${reqDP.toLocaleString()} (${reqDPpct.toFixed(0)}%) · Customer has: $${dpInput.toLocaleString()}`,note:dpNote});
+
+     // ── TERM & PAYMENT ──────────────────────────────────────
+     const maxT = prod.maxTermOverride ? Math.min(TIER[effTier].maxTerm,prod.maxTermOverride) : TIER[effTier].maxTerm;
+     finalTerm=Math.min(termReq,maxT);
+     finalFinanced=Math.max(0,sale-Math.max(dpInput,reqDP));
+     finalPmt=Math.round(finalFinanced/finalTerm);
+     const gr=checkGuardrails(effTier,product,sale,Math.max(dpInput,reqDP),finalTerm,finalPmt,income,debts,finalFinanced);
+     gr.warnings.forEach(w=>guardrailAlerts.push(w));
+     let termStat=(!gr.dtiOK||!gr.ltvOK||finalPmt<TIER[effTier].pmtRealMin)?'warn':'pass';
+     steps.push({s:termStat,n:'Term & Payment',d:`Term: ${finalTerm}mo · Pmt: $${finalPmt}/mo · DTI: ${gr.dti.toFixed(0)}%`,note:`APR: ${finalAPR}% · LTV: ${gr.ltv.toFixed(0)}% · Max DTI: ${TIER[effTier].maxDTI}% · Max term: ${maxT}mo`});
+     steps.push({s:finalFinanced<=finalLimit?'pass':'warn',n:'Credit Limit',d:`Limit $${Math.round(finalLimit).toLocaleString()} · Financed $${Math.round(finalFinanced).toLocaleString()}`,note:finalFinanced<=finalLimit?'Within limit.':'Exceeds limit — increase DP to reduce financed amount.'});
+
+     // ── PRIORITY 2: SALVAGE ─────────────────────────────────
+     // CALIBRATION: Run structure check for ALL cases where deal is not already clear.
+     // Previously skipped when prodBlock=true — this caused too-early external routing.
+     // Sub-prime FICO also now evaluated here (no early exit at FICO gate).
+     const allClear=!prodBlock&&dpOK&&gr.dtiOK&&gr.ltvOK&&finalFinanced<=finalLimit&&finalPmt>=TIER[effTier].pmtRealMin;
+     const shouldTryStructure = !allClear && (prod.flex || fr || subPrime || subPrimeSafeOverride);
+     if (shouldTryStructure) {
+       const sv=findSalvage(effTier,sale,product,fico,tenure,verified,income,debts);
+       if(sv){salvage=sv;steps.push({s:'sv',n:'Structure Check',d:'✦ STRUCTURE FOUND — in-house path likely viable with adjustments',note:`DP $${sv.dp.toLocaleString()} · ${sv.term}mo · $${sv.pmt}/mo · DTI ${sv.dti}%`});}
+       else {
+         // PRIORITY 3: SPLIT TENDER — always attempt before routing external
+         const sp=buildSplit(effTier,sale,Math.max(dpInput,reqDP*0.5),fico,income,product);
+         if(sp){split=sp;steps.push({s:'sv',n:'Structure Check',d:'✦ SPLIT TENDER — partial in-house possible',note:`Daniels: $${sp.danielsAmt.toLocaleString()} · ${sp.partner}: $${sp.extAmt.toLocaleString()}`});}
+         else steps.push({s:'warn',n:'Structure Check',d:'No viable in-house structure found — external path recommended',note:'Salvage and split both evaluated. Route to best-fit external partner.'});
+       }
+     } else if (!allClear) {
+       // CALIBRATION: For ALL remaining non-clear cases (strict products, any edge case),
+       // ALWAYS try split before external. Split is a natural path, not a last resort.
+       const sp=buildSplit(effTier,sale,Math.max(dpInput,reqDP*0.5),fico,income,product);
+       if(sp){split=sp;steps.push({s:'sv',n:'Structure Check',d:'✦ SPLIT TENDER — partial in-house possible',note:`Daniels: $${sp.danielsAmt.toLocaleString()} · ${sp.partner}: $${sp.extAmt.toLocaleString()}`});}
+       else steps.push({s:'warn',n:'Structure Check',d:'No viable structure found — external path recommended',note:'Full in-house and split both evaluated. Route to external financing.'});
+     } else if(allClear) {
+       steps.push({s:'skip',n:'Structure Check',d:'Not needed — deal pre-qualifies as-is',note:''});
+     }
+
+     // ── PRIORITY 4: LIKELY PATH & RECOMMENDATION ────────────────────────────────
+     // CALIBRATION: Prefer structure over rejection.
+     // 550–599 in-house when allClear. Self-employed in-house when allClear.
+     // Tier C tries structure before external. Sub-prime routes SNAP only after structure fails.
+     if (allClear) {
+       if (subPrime) {
+         // Sub-prime allClear means DP + structure met — in-house viable with tight limits
+         decision='LIKELY IN-HOUSE — With Adjustments'; cls='adjust'; routing='inhouse';
+         steps.push({s:'pass',n:'Likely Path',d:'In-house financing — viable under tight structure',note:'FICO below 550 but deal structure clears all guardrails. High DP compensates for risk level. '+dealContext});
+       } else if ((effTier==='A'||effTier==='B')&&fico>=550) {
+         // CALIBRATION: 550+ in-house when structure passes — removed the fico>=600 gate here
+         // 550–599 restricted path already enforced at product/DP level
+         decision='LIKELY IN-HOUSE'; cls='approved'; routing='inhouse';
+         steps.push({s:'pass',n:'Likely Path',d:'In-house financing — high confidence this will qualify',note:'All prequalification criteria met. '+dealContext});
+       } else if (effTier==='C') {
+         // Tier C can still go in-house if structure passes — don't auto-route external
+         decision='LIKELY IN-HOUSE — With Adjustments'; cls='adjust'; routing='inhouse';
+         steps.push({s:'pass',n:'Likely Path',d:'In-house financing — viable with tight Tier C structure',note:'Tier C: max 12 months, $1,500 cap. Structure clears. '+dealContext});
+       } else {
+         decision='LIKELY IN-HOUSE'; cls='approved'; routing='inhouse';
+         steps.push({s:'pass',n:'Likely Path',d:'In-house financing — high confidence this will qualify',note:dealContext});
+       }
+     } else if(salvage) {
+       decision='LIKELY IN-HOUSE — With Adjustments'; cls='adjust'; routing='inhouse';
+       finalDP=salvage.dp; finalTerm=salvage.term; finalPmt=salvage.pmt; finalFinanced=salvage.financed;
+       steps.push({s:'pass',n:'Likely Path',d:'In-house financing — viable with adjusted structure',note:`Raise DP to $${salvage.dp.toLocaleString()}, set term ${salvage.term}mo. This is the most likely viable in-house structure.`});
+     } else if(split) {
+       decision='LIKELY SPLIT TENDER'; cls='split'; routing='split';
+       steps.push({s:'info',n:'Likely Path',d:'SPLIT — In-house + External most likely',note:`Daniels: $${split.danielsAmt.toLocaleString()} · ${split.partner}: $${split.extAmt.toLocaleString()}`});
+     } else {
+       // Only reach here after salvage AND split both failed
+       // CALIBRATION: Correct partner routing — sub-600 never goes to prime lenders
+       const ep = fico < 600 ? 'SNAP / Koalafi' : 'Synchrony / WF';
+       routing = fico < 600 ? 'snap' : 'external';
+       decision='LIKELY EXTERNAL — '+ep; cls='external';
+       steps.push({s:'warn',n:'Likely Path',d:'EXTERNAL — '+ep+' most likely',note: subPrime ? 'FICO below 550 — structure options exhausted. SNAP / Koalafi is the most suitable path.' : fico<600 ? 'FICO 550–599 — structure not viable under current terms. SNAP / Koalafi recommended.' : 'External financing is the recommended path based on this profile.'});
+     }
+
+     const sc=genSalesScript(cls,decision,finalDP||reqDP,finalPmt,finalTerm,salvage,split,fico,product,dpShortfall);
+     render(decision,cls,steps,effTier,score,finalDP||reqDP,reqDPpct,finalTerm,finalPmt,finalLimit,finalAPR,sale,dpInput,salvage,split,routing,gr.dti,gr.ltv,gr.dtiOK,gr.ltvOK,dpShortfall,finalFinanced,reqDP,edgeCases,guardrailAlerts,sc);
+   }
+   ════════════════════════════════════════════════════════════════════════ */
 
 function calcAPR(tier,product,verified,emptype){
   let a=TIER[tier].apr;
@@ -1022,14 +1097,14 @@ function calcAPR(tier,product,verified,emptype){
 // ════════════════════════════════════════════════════════════
 function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,dpInput,salvage,split,routing,dti,ltv,dtiOK,ltvOK,dpShort,financed,reqDP,edgeCases,guardrailAlerts,script) {
   const sub={approved:'Most likely path: in-house — high confidence',split:'Most likely: partial in-house + external partner',adjust:'In-house viable with adjusted terms',external:'Most likely path: external financing',declined:'Not viable for in-house — see recommended path',neutral:''};
-  const chips={inhouse:'<span class="chip c-ih">🏠 In-House Financing</span>',external:'<span class="chip c-ex">🔄 External Financing</span>',snap:'<span class="chip c-snap">⚠ SNAP / Acima Only</span>',split:'<span class="chip c-split">⚡ Split Tender</span>'};
+  const chips={inhouse:'<span class="chip c-ih">🏠 In-House Financing</span>',external:'<span class="chip c-ex">🔄 External Financing</span>',snap:'<span class="chip c-snap">⚠ SNAP / Koalafi Only</span>',split:'<span class="chip c-split">⚡ Split Tender</span>'};
   const ico={pass:'✓',fail:'✗',warn:'!',skip:'—',info:'i',sv:'✦',ec:'◈'};
 
   // options grid
   let optsH='';
   if(tier){
     const fv=parseInt(document.getElementById('fico').value);
-    const ep=fv<600?'SNAP / Acima':'Synchrony / WF';
+    const ep=fv<600?'SNAP / Koalafi':'Synchrony / WF';
     if(cls==='approved')optsH=`<div class="og ani2"><div class="oc oa"><div class="oc-badge">✓ MOST LIKELY</div><div class="oc-lbl">Path A</div><div class="oc-title">In-House</div><div class="oc-det">$${(dp||0).toLocaleString()} down · ${term}mo · $${(pmt||0).toLocaleString()}/mo</div></div><div class="oc oc2" style="opacity:.5"><div class="oc-lbl">Path B</div><div class="oc-title">External</div><div class="oc-det">Available as backup</div></div><div class="oc od" style="opacity:.35"><div class="oc-lbl">Path C</div><div class="oc-title">Not Viable</div><div class="oc-det">Unlikely given profile</div></div></div>`;
     else if(cls==='split'&&split)optsH=`<div class="og ani2"><div class="oc oa"><div class="oc-lbl">Daniels Portion</div><div class="oc-title">In-House</div><div class="oc-det">$${split.danielsAmt.toLocaleString()} in-house financing</div></div><div class="oc ob"><div class="oc-badge">✓ MOST LIKELY</div><div class="oc-lbl">Path B — Split</div><div class="oc-title">In-House + External</div><div class="oc-det">DHC $${split.danielsAmt.toLocaleString()} + ${split.partner} $${split.extAmt.toLocaleString()}</div></div><div class="oc oc2"><div class="oc-lbl">Path C</div><div class="oc-title">External Only</div><div class="oc-det">${split.partner} full amount</div></div></div>`;
     else if(cls==='adjust'&&salvage)optsH=`<div class="og ani2"><div class="oc ob"><div class="oc-badge">✓ MOST LIKELY</div><div class="oc-lbl">Path A — Adjusted</div><div class="oc-title">In-House (Restructured)</div><div class="oc-det">$${salvage.dp.toLocaleString()} down · ${salvage.term}mo · $${salvage.pmt}/mo</div></div><div class="oc oc2"><div class="oc-lbl">Path B</div><div class="oc-title">External</div><div class="oc-det">${ep}</div></div><div class="oc od" style="opacity:.45"><div class="oc-lbl">Path C</div><div class="oc-title">Not Viable</div><div class="oc-det">Last resort</div></div></div>`;
