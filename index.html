@@ -558,6 +558,8 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
 // ════════════════════════════════════════════════════════════
 // MAIN ENGINE
 // ════════════════════════════════════════════════════════════
+const ST = { ver:true, def:false, inq:false };
+
 async function calculate() {
   // ── EDGE FUNCTION MIGRATION ──────────────────────────────────────────────
   // Business logic (scoring, DP matrix, FICO gates, salvage, split, hard
@@ -586,6 +588,10 @@ async function calculate() {
   };
 
   let result;
+  const rcolEl = document.getElementById('rcol');
+  if (rcolEl) {
+    rcolEl.innerHTML = '<div class="panel"><div class="idle"><div class="idle-ico">⏳</div><div class="idle-t">Running pre-screen…</div><div class="idle-s">Checking the most likely financing path.</div></div></div>';
+  }
   try {
     const resp = await fetch('https://ecfxeebhtgkbsdeuiueb.supabase.co/functions/v1/credit-prescreen', {
       method: 'POST',
@@ -596,17 +602,22 @@ async function calculate() {
       },
       body: JSON.stringify(payload)
     });
-    if (!resp.ok) throw new Error('Server returned ' + resp.status);
+    if (!resp.ok) {
+      let detail = '';
+      try { detail = await resp.text(); } catch(e) {}
+      throw new Error('Server returned HTTP ' + resp.status + (detail ? ' — ' + detail.slice(0,200) : ''));
+    }
     result = await resp.json();
     if (result.error) throw new Error(result.error);
   } catch (err) {
-    const resultsEl = document.getElementById('results');
-    if (resultsEl) {
-      resultsEl.innerHTML = '<div style="padding:24px;border:1px solid #e0b4b4;background:#fff0f0;border-radius:8px;color:#8a1f1f;font-family:Arial,sans-serif;">' +
+    console.error('Pre-screen service error:', err);
+    const msg = '<div style="padding:24px;border:1px solid #e0b4b4;background:#fff0f0;border-radius:8px;color:#8a1f1f;font-family:Arial,sans-serif;">' +
         '<strong>Unable to reach the credit pre-screen service.</strong><br>' +
         'Please check your connection and try again. If this keeps happening, let your manager know.' +
         '<br><span style="font-size:12px;color:#a05050;">(' + (err && err.message ? err.message : 'network error') + ')</span>' +
         '</div>';
+    if (rcolEl) {
+      rcolEl.innerHTML = msg;
     } else {
       alert('Unable to reach the credit pre-screen service. Please check your connection and try again.');
     }
@@ -637,8 +648,6 @@ async function calculate() {
    Left here commented out in case the Edge Function is ever unreachable
    for an extended period and a temporary local fallback is needed.
    Do NOT uncomment and use both at the same time.
-
-const ST = { ver:true, def:false, inq:false };
 
 // ════════════════════════════════════════════════════════════
 // PRODUCT CONFIG
