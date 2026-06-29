@@ -560,6 +560,19 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
 // ════════════════════════════════════════════════════════════
 const ST = { ver:true, def:false, inq:false };
 
+// ── AMORTIZED MONTHLY PAYMENT ────────────────────────────────────────────────
+// Standard fixed-payment amortization formula, same math used in the actual
+// Daniels retail installment contract. Replaces the old simple-division
+// payment (financed/term), which silently ignored APR and understated every
+// quoted payment. APR is computed by calcAPR() above and must be passed in.
+function calcMonthlyPayment(financed, aprPct, termMonths) {
+  if (!financed || financed <= 0 || !termMonths || termMonths <= 0) return 0;
+  const r = (aprPct / 100) / 12;
+  if (r <= 0) return Math.round(financed / termMonths); // 0% APR edge case — no division by zero
+  const pmt = (financed * r) / (1 - Math.pow(1 + r, -termMonths));
+  return Math.round(pmt);
+}
+
 async function calculate() {
   // ── EDGE FUNCTION MIGRATION ──────────────────────────────────────────────
   // Business logic (scoring, DP matrix, FICO gates, salvage, split, hard
@@ -765,7 +778,7 @@ function checkGuardrails(tier, product, sale, dpInput, term, monthly, income, de
 // ════════════════════════════════════════════════════════════
 // SALVAGE ENGINE (Priority 2)
 // ════════════════════════════════════════════════════════════
-function findSalvage(tier, sale, product, fico, tenure, verified, income, debts) {
+function findSalvage(tier, sale, product, fico, tenure, verified, income, debts, emptype) {
   const t = TIER[tier]; const p = PROD[product];
   const subPrime = fico < 550;
   const fr = fico >= 550 && fico < 600;
@@ -800,11 +813,12 @@ function findSalvage(tier, sale, product, fico, tenure, verified, income, debts)
     if (fin>lim||fin>p.maxIH||fin>maxFinanced) continue;  // enforce financed cap
     const ltv = sale>0?(fin/sale)*100:0;
     if (ltv>t.maxLTV) continue;
+    const salvAPR = calcAPR(tier, product, verified, emptype);
     for (let tm=6; tm<=effectiveMaxT; tm+=3) {
-      const pmt = fin/tm;
+      const pmt = calcMonthlyPayment(fin, salvAPR, tm);
       if (pmt<t.pmtRealMin) continue;
       const dti = income>0?((pmt+debts)/income)*100:999;
-      if (dti<=t.maxDTI) return {dp:Math.round(dp), term:tm, pmt:Math.round(pmt), financed:Math.round(fin), dti:dti.toFixed(0)};
+      if (dti<=t.maxDTI) return {dp:Math.round(dp), term:tm, pmt:Math.round(pmt), financed:Math.round(fin), dti:dti.toFixed(0), apr:salvAPR};
     }
   }
   return null;
@@ -974,7 +988,7 @@ function genSalesScript(cls, decision, dp, monthly, term, salvage, split, fico, 
        decision='LIKELY IN-HOUSE — Streamlined'; cls='approved'; routing='inhouse';
        const dpAZ=Math.max(200,Math.round(getBaseDPpct(effTier,sale)/100*sale));
        const termAZ=Math.min(termReq,TIER[effTier].maxTerm); const finAZ=Math.max(0,sale-dpAZ);
-       const pmtAZ=Math.round(finAZ/Math.max(1,termAZ));
+       const pmtAZ=calcMonthlyPayment(finAZ, finalAPR, termAZ);
        ['Product Risk','Down Payment','Term & Payment','Structure Check'].forEach(n=>steps.push({s:'skip',n,d:'Skipped — streamlined path applies',note:''}));
        steps.push({s:'pass',n:'Likely Path',d:'In-house financing — high confidence this will qualify',note:dealContext});
        const sc=genSalesScript('approved',decision,dpAZ,pmtAZ,termAZ,null,null,fico,product,0);
@@ -1028,7 +1042,7 @@ function genSalesScript(cls, decision, dp, monthly, term, salvage, split, fico, 
      const maxT = prod.maxTermOverride ? Math.min(TIER[effTier].maxTerm,prod.maxTermOverride) : TIER[effTier].maxTerm;
      finalTerm=Math.min(termReq,maxT);
      finalFinanced=Math.max(0,sale-Math.max(dpInput,reqDP));
-     finalPmt=Math.round(finalFinanced/finalTerm);
+     finalPmt=calcMonthlyPayment(finalFinanced, finalAPR, finalTerm);
      const gr=checkGuardrails(effTier,product,sale,Math.max(dpInput,reqDP),finalTerm,finalPmt,income,debts,finalFinanced);
      gr.warnings.forEach(w=>guardrailAlerts.push(w));
      let termStat=(!gr.dtiOK||!gr.ltvOK||finalPmt<TIER[effTier].pmtRealMin)?'warn':'pass';
@@ -1042,7 +1056,7 @@ function genSalesScript(cls, decision, dp, monthly, term, salvage, split, fico, 
      const allClear=!prodBlock&&dpOK&&gr.dtiOK&&gr.ltvOK&&finalFinanced<=finalLimit&&finalPmt>=TIER[effTier].pmtRealMin;
      const shouldTryStructure = !allClear && (prod.flex || fr || subPrime || subPrimeSafeOverride);
      if (shouldTryStructure) {
-       const sv=findSalvage(effTier,sale,product,fico,tenure,verified,income,debts);
+       const sv=findSalvage(effTier,sale,product,fico,tenure,verified,income,debts,emptype);
        if(sv){salvage=sv;steps.push({s:'sv',n:'Structure Check',d:'✦ STRUCTURE FOUND — in-house path likely viable with adjustments',note:`DP $${sv.dp.toLocaleString()} · ${sv.term}mo · $${sv.pmt}/mo · DTI ${sv.dti}%`});}
        else {
          // PRIORITY 3: SPLIT TENDER — always attempt before routing external
@@ -1109,6 +1123,8 @@ function calcAPR(tier,product,verified,emptype){
   if(!verified||emptype==='selfemployed')a+=3;
   return Math.min(a,42);
 }
+
+
    ════════════════════════════════════════════════════════════════════════ */
 
 // ════════════════════════════════════════════════════════════
