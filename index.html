@@ -166,6 +166,15 @@ body{font-family:'Sora',sans-serif;background:#E8EDF4;color:var(--ink);min-heigh
 .f:last-child{margin-bottom:0}
 .f label{display:block;font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.7px;text-transform:uppercase;margin-bottom:5px}
 .f label .req{color:var(--sky)}
+.dept-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.dept-row select{flex:1.4;height:40px;border:1.5px solid var(--border);border-radius:7px;padding:0 8px;font-family:'Sora',sans-serif;font-size:13px;font-weight:500;color:var(--ink);background:var(--off)}
+.dept-row input[type=number]{flex:1;height:40px;border:1.5px solid var(--border);border-radius:7px;padding:0 10px;font-family:'Sora',sans-serif;font-size:13px;font-weight:500;color:var(--ink)}
+.dept-row .dept-rm{flex:0 0 28px;height:28px;border:none;background:none;color:var(--sub);font-size:16px;cursor:pointer;line-height:1}
+.dept-row .dept-rm:hover{color:var(--red)}
+.dept-add-btn{width:100%;height:36px;border:1.5px dashed var(--border);border-radius:7px;background:none;color:var(--steel);font-family:'Sora',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;margin-bottom:8px}
+.dept-add-btn:hover{border-color:var(--steel);background:var(--ice)}
+.dept-total-line{font-size:12.5px;color:var(--sub);font-weight:500}
+.dept-total-line strong{color:var(--navy);font-family:'JetBrains Mono',monospace}
 .f input[type=number]{width:100%;height:44px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-family:'Sora',sans-serif;font-size:14px;font-weight:500;color:var(--ink);background:var(--off);outline:none;transition:.2s}
 .f input[type=number]:focus{border-color:var(--steel);background:#fff;box-shadow:0 0 0 3px rgba(43,108,176,.1)}
 .f select{width:100%;height:44px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-family:'Sora',sans-serif;font-size:14px;font-weight:500;color:var(--ink);background:var(--off) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;appearance:none;outline:none;cursor:pointer;transition:.2s}
@@ -450,21 +459,12 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
       <div class="sec">Deal Details</div>
 
       <div class="f">
-        <label>Product Category <span class="req">*</span></label>
-        <select id="product" onchange="onProd()">
-          <option value="furniture">Furniture</option>
-          <option value="mattress">Mattress</option>
-          <option value="accessories">Accessories</option>
-          <option value="appliances">Appliances</option>
-          <option value="electronics">Electronics / TV / Laptop</option>
-          <option value="seasonal">Seasonal (A/C, Heater)</option>
-          <option value="iphone">iPhone / Apple Device</option>
-        </select>
-      </div>
-
-      <div class="f">
-        <label>Purchase Price ($) <span class="req">*</span></label>
-        <input type="number" id="purchase" value="1800" min="0" step="50" oninput="updDP()">
+        <label>Merchandise — by Department <span class="req">*</span></label>
+        <div id="dept-rows"></div>
+        <button type="button" class="dept-add-btn" onclick="addDeptRow()">+ Add another department</button>
+        <div class="dept-total-line">Total purchase: <strong id="dept-total-disp">$1,800</strong></div>
+        <input type="hidden" id="purchase" value="1800">
+        <input type="hidden" id="product" value="furniture">
       </div>
 
       <div class="f">
@@ -581,10 +581,10 @@ async function calculate() {
   // form inputs, posts them, and renders whatever comes back.
   const fico       = parseInt(document.getElementById('fico').value);
   const income     = parseFloat(document.getElementById('income').value)||0;
-  const purchase   = parseFloat(document.getElementById('purchase').value)||0;
+  const items      = getDeptItems(); // [{product, amount}, ...] — see addDeptRow()/getDeptItems()
+  const purchase   = items.reduce((s,it)=>s+it.amount, 0);
   const tax        = parseFloat(document.getElementById('tax').value)||0;
   const tenure     = parseInt(document.getElementById('tenure').value);
-  const product    = document.getElementById('product').value;
   const dpInput    = parseFloat(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0;
   const termReq    = getTermValue();
   const debts      = parseFloat(document.getElementById('debts').value)||0;
@@ -594,8 +594,18 @@ async function calculate() {
   const priorDef   = ST.def;
   const inquiries  = ST.inq;
 
+  if (items.length === 0) {
+    const earlyRcol = document.getElementById('rcol');
+    if (earlyRcol) earlyRcol.innerHTML = '<div style="padding:24px;border:1px solid #e0b4b4;background:#fff0f0;border-radius:8px;color:#8a1f1f;font-family:Arial,sans-serif;"><strong>Add at least one department.</strong><br>Pick a department and enter an amount before running the pre-screen.</div>';
+    return;
+  }
+
+  // Single-product field kept for backward compatibility with older Edge
+  // Function versions: send the LARGEST line item as a fallback 'product'.
+  const product = items.slice().sort((a,b)=>b.amount-a.amount)[0].product;
+
   const payload = {
-    fico, income, purchase, tax, tenure, product,
+    fico, income, purchase, tax, tenure, product, items,
     dpInput, termReq, debts, tradelines, emptype,
     verified, priorDef, inquiries
   };
@@ -1197,8 +1207,9 @@ function manDP(){
 }
 function hDP(v){
   const sale=getSale(); const pct=sale>0?((v/sale)*100).toFixed(0):0;
-  const el=document.getElementById('dph'); const p=document.getElementById('product').value;
-  if(p==='iphone'){el.style.color='var(--red)';el.textContent='⚠ iPhone: 25% minimum required';return;}
+  const el=document.getElementById('dph');
+  const hasIphone = getDeptItems().some(it => it.product === 'iphone');
+  if(hasIphone){el.style.color='var(--red)';el.textContent='⚠ iPhone in cart: 25% minimum required on that portion';return;}
   el.style.color='var(--steel)'; el.textContent=pct+'% of total sale price';
 }
 function syncTerm(){
@@ -1244,6 +1255,62 @@ function getSale(){
   const t=parseFloat(document.getElementById('tax').value)||0;
   return p*(1+t/100);
 }
+const DEPT_LABELS = {
+  furniture:'Furniture', mattress:'Mattress', accessories:'Accessories',
+  appliances:'Appliances', electronics:'Electronics / TV / Laptop',
+  seasonal:'Seasonal (A/C, Heater)', iphone:'iPhone / Apple Device'
+};
+let deptRowSeq = 0;
+
+function deptRowHtml(id, selected, amount){
+  const opts = Object.entries(DEPT_LABELS).map(([v,l]) =>
+    `<option value="${v}"${v===selected?' selected':''}>${l}</option>`).join('');
+  return `<div class="dept-row" data-row-id="${id}">
+    <select onchange="onDeptChange()">${opts}</select>
+    <input type="number" min="0" step="50" value="${amount}" oninput="onDeptChange()">
+    <button type="button" class="dept-rm" onclick="removeDeptRow(${id})" title="Remove">✕</button>
+  </div>`;
+}
+
+function addDeptRow(selected, amount){
+  deptRowSeq++;
+  const container = document.getElementById('dept-rows');
+  container.insertAdjacentHTML('beforeend', deptRowHtml(deptRowSeq, selected||'furniture', amount!=null?amount:0));
+  onDeptChange();
+}
+
+function removeDeptRow(id){
+  const row = document.querySelector(`.dept-row[data-row-id="${id}"]`);
+  if (row) row.remove();
+  // Always keep at least one row so the form never has zero departments
+  if (document.querySelectorAll('.dept-row').length === 0) addDeptRow('furniture', 1800);
+  else onDeptChange();
+}
+
+function getDeptItems(){
+  const rows = document.querySelectorAll('.dept-row');
+  const items = [];
+  rows.forEach(row => {
+    const product = row.querySelector('select').value;
+    const amount = parseFloat(row.querySelector('input[type=number]').value) || 0;
+    if (amount > 0) items.push({ product, amount });
+  });
+  return items;
+}
+
+function onDeptChange(){
+  const items = getDeptItems();
+  const total = items.reduce((s,it)=>s+it.amount, 0);
+  document.getElementById('purchase').value = total;
+  document.getElementById('dept-total-disp').textContent = '$' + total.toLocaleString();
+  // keep the hidden 'product' field as the largest line item, for any legacy display logic
+  if (items.length > 0) {
+    const biggest = items.slice().sort((a,b)=>b.amount-a.amount)[0].product;
+    document.getElementById('product').value = biggest;
+  }
+  updDP();
+}
+
 function onProd(){hDP(parseInt(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0);}
 function updateEdge(){}
 function tog(k,v){
@@ -1259,12 +1326,15 @@ function resetAll(){
   document.getElementById('dpsl').value=300;document.getElementById('dpman').value='';document.getElementById('dpv').textContent='$300';
   document.getElementById('dph').textContent='Adjust slider or enter below';document.getElementById('dph').style.color='var(--steel)';
   document.getElementById('term').value=18;document.getElementById('tv').textContent='18 mo';document.getElementById('term-manual').value='';highlightTermChip(18);
-  document.getElementById('product').value='furniture';document.getElementById('tenure').value='18';
+  document.getElementById('dept-rows').innerHTML='';addDeptRow('furniture',1800);document.getElementById('tenure').value='18';
   document.getElementById('debts').value=1100;document.getElementById('tradelines').value='moderate';
   document.getElementById('emptype').value='employed';
   tog('ver',true);tog('def',false);tog('inq',false);
   document.getElementById('rcol').innerHTML='<div class="panel"><div class="idle"><div class="idle-ico">🏠</div><div class="idle-t">Ready to evaluate</div><div class="idle-s">Enter customer details on the left and press <strong>Run Pre-Screen</strong>.</div></div></div>';
 }
+
+// ── INITIALIZE: seed the department list with one starting row ──────────────
+addDeptRow('furniture', 1800);
 </script>
 </body>
 </html>
