@@ -12,7 +12,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const ENGINE = "v4.0-2026-11-09";
+const ENGINE = "v4.1-2026-11-09";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,18 +37,22 @@ const TIER = {
   C:{maxTerm:12, maxDTI:35, maxLTV:85, apr:37, limitCap:1000, limitMult:1.5, pmtRealMin:120, maxDP:40},
 };
 
-// Tier A: Infinity "Hybrid Base" 5/5/8/10 (band breakpoints assumed 800/1500/2500 — to confirm).
-// Tier B: Infinity "Hybrid Tier B" bands not yet transcribed — conservative v2 values kept.
-const DP_MAT = {A:[5,5,8,10], B:[10,15,20,25]};
+// Transcribed from Infinity X090 on 2026-11-09 (read-only). Bands: $0-799.99 / $800-1,499.99 / $1,500-2,499.99 / $2,500+.
 const DP_BRK = [800,1500,2500];
+const DP_A    = [5,5,8,10];     // X003 "Hybrid Base Down Payment" (FICO 640+, score A, up to $5,000)
+const DP_B_HI = [5,8,10,12];    // X004 "Hybrid Tier B Down Payment", FICO 640+ (score A or B, up to $3,500)
+const DP_B_LO = [10,12,15,18];  // X004 "Hybrid Tier B Down Payment", FICO 600-639 (score A or B)
+const DP_AZ   = {A:0, B:5};     // X001/X002 "A/B Strong External Profile" (FICO 660+, up to $1,200)
 const TIER_C_DP = {good:15, weak:25}; // X005: score A/B = 15%, score C = 25%
 
 const RANK = {A:3, B:2, C:1};
 
-function getBaseDPpct(tier, sale, scoreTier) {
+function getBaseDPpct(tier, sale, scoreTier, fico) {
   if (tier === 'C') return scoreTier === 'C' ? TIER_C_DP.weak : TIER_C_DP.good;
+  if (tier === 'AZ') return scoreTier === 'A' ? DP_AZ.A : DP_AZ.B;
   let i = sale>=DP_BRK[2]?3:sale>=DP_BRK[1]?2:sale>=DP_BRK[0]?1:0;
-  return DP_MAT[tier][i];
+  if (tier === 'A') return DP_A[i];
+  return (fico >= 640 ? DP_B_HI : DP_B_LO)[i];
 }
 
 function ficoBand(fico) { return fico>=640 ? 'A' : fico>=600 ? 'B' : fico>=550 ? 'C' : null; }
@@ -140,9 +144,9 @@ function calcScore(fico, income, verified, tenure, tradelines) {
 function getTier(sc){ return sc>=75?'A':sc>=60?'B':'C'; }
 
 function calcDP(tier, sale, prod, fico, tenure, verified, scoreTier) {
-  const t = TIER[tier];
+  const t = TIER[tier === 'AZ' ? 'A' : tier];
   const isI = !!prod.hasIphone;
-  const base = getBaseDPpct(tier, sale, scoreTier);
+  const base = getBaseDPpct(tier, sale, scoreTier, fico);
   const adj = prod.adj;
   let relief = 0;
   if (fico>=600 && !isI) {
@@ -305,8 +309,9 @@ function deriveOpen(inputs) {
 }
 
 const UNKNOWNS = [
-  'Tier A / Tier B down-payment bands (using $800/$1,500/$2,500 breakpoints for A; older values for B) until transcribed from Infinity.',
-  'Auto-Zone (X001/X002) down payment table not transcribed — using the Tier A/B tables.',
+  'X003 (Tier A) has Max Term Months = 24 in Infinity, but the global M105 automatic-terms table says 18. The simulator shows 18 (the conservative number) until a Test Rules run confirms which one wins.',
+  'X001/X002 use a down-payment table that starts at FICO 660. What Infinity does for a score-A customer at FICO 640-659 under X002 is not confirmed (down payment is $100 either way for sales up to $1,200).',
+  'The excluded-departments list on X003/X001/X002 is long and was only partly read (it starts 284, 340, 350, 376-380, 401-403, 426-428...). Electronics are excluded; other departments could be too.',
   'C992 (Credit Line) eligibility rules not documented — modeled as: existing customer with enough available credit line, $100 down, 18 months, ignores the risk score.',
   'C983 (High Fico) credit-line formula is not in the documentation — amount limit not modeled.',
   'How Infinity ranks offers into "Best Offer" is not documented — lowest down payment, then longest term, is assumed.',
@@ -327,7 +332,7 @@ function evalOffers(c, score) {
     if (!clean) why.push('Exclusion: delinquent >10 days, unpaid returned check/NSF/late charge, or co-signer');
     if (!merchOK) why.push('A department is over its own cap');
     if (!extraOK) why.push(extraWhy);
-    const d = calcDP(tier, sale, combo, fico, c.tenure, c.verified, score);
+    const d = calcDP((rule==='X001'||rule==='X002') ? 'AZ' : tier, sale, combo, fico, c.tenure, c.verified, score);
     const dpFit = Math.max(d.dollar, Math.ceil(sale - cap));
     if (dpFit > sale*0.5) why.push('Amount over the $'+cap.toLocaleString()+' rule cap');
     const fin = Math.max(0, sale - dpFit);
@@ -339,7 +344,7 @@ function evalOffers(c, score) {
   const azTier = score==='A' ? 'A' : 'B';
   hybrid('X001','Auto-Zone (external)',660,900,['A','B'],1200,18,100,azTier, combo.safe && !combo.hasIphone && c.emptype!=='selfemployed', 'Auto-Zone excludes self-employed, iPhone and non-furniture departments');
   hybrid('X002','Auto-Zone (internal)',640,900,['A'],1200,18,100,'A', combo.safe && !combo.hasIphone, 'Auto-Zone excludes iPhone and non-furniture departments');
-  hybrid('X003','Tier A',640,900,['A'],5000,18,120,'A', true, '');
+  hybrid('X003','Tier A',640,900,['A'],5000,18,120,'A', !combo.items.some(function(it){return it.product==='electronics'||it.product==='iphone';}), 'X003 excludes electronics departments (and, as far as we can see, iPhone). Infinity moves on to Tier B / Tier C for these');
   hybrid('X004','Tier B',600,900,['A','B'],3500,18,120,'B', true, '');
   hybrid('X005','Tier C',550,599,['A','B','C'],1000,12,120,'C', true, '');
 
