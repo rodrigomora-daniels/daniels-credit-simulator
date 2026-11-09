@@ -1,110 +1,15 @@
 <!DOCTYPE html>
 <!--
-================================================================================
-DANIELS HOME CENTER — CREDIT PRE-SCREEN TOOL
-Release Notes v3.0 | April 2026
-================================================================================
-
-ABOUT THIS TOOL
-This is a pre-screening / prequalification simulator built on the Daniels
-Hybrid Credit Model. It is NOT the Infinity approval system. It runs in
-parallel with the same risk logic to give approvers a fast, structured
-indication of the most likely financing path for a given customer and deal.
-
---------------------------------------------------------------------------------
-1. FINAL DECISION PATH LABELS
---------------------------------------------------------------------------------
-
-All output labels use probability language, not approval language.
-No label implies a final credit decision has been made.
-
-  LIKELY IN-HOUSE — Streamlined
-    Profile meets all fast-track conditions: FICO 660+, verified income,
-    safe product, small deal. Lowest friction path. High confidence.
-
-  LIKELY IN-HOUSE
-    Full evaluation passed. All risk criteria met for in-house financing.
-    Customer should proceed to formal application.
-
-  LIKELY IN-HOUSE — With Adjustments
-    In-house is viable but requires a specific structure: a higher down
-    payment and/or a shorter term. The simulator calculates and displays
-    the exact adjusted figures needed.
-
-  LIKELY SPLIT TENDER
-    In-house cannot absorb the full amount alone. Recommended structure:
-    Daniels finances its safe portion (capped by tier), a partner
-    (Synchrony/WF for FICO 600+, SNAP / Koalafi for FICO <600) covers the rest.
-
-  LIKELY EXTERNAL — [Partner Name]
-    Profile does not qualify for in-house financing under current conditions.
-    Routed to the appropriate external partner based on FICO band.
-    FICO 600+: Synchrony / WF. FICO <600: SNAP / Lease-to-Own.
-
-  NOT VIABLE — [Reason]
-    Hard stop triggered (prior default, fraud flag, no income) OR FICO below
-    550 (19.6–27.8% confirmed default rate). No in-house path available.
-    SNAP / Koalafi is the only option if FICO is 550–599 and hard stops are clear.
-
---------------------------------------------------------------------------------
-2. THE $1,200 THRESHOLD IN PRE-SCREEN CONTEXT
---------------------------------------------------------------------------------
-
-The $1,200 figure appears in the engine in two places only:
-
-  a) STREAMLINED PATH SIGNAL (sale price <= $1,200)
-     When the total sale price is at or below $1,200 AND all other fast-track
-     conditions are met (FICO 660+, verified income, safe product), the engine
-     labels the deal as "Streamlined." This is a speed signal, not a gate.
-     A deal above $1,200 proceeds to full evaluation — it is not penalized.
-
-  b) DEAL CONTEXT FLAG (financed amount < $1,200 after DP)
-     Stored internally as `smallDeal = true/false`. Used only to add a
-     contextual note in the evaluation breakdown ("Small deal — streamlined
-     path likely"). It changes no logic, blocks no path, and triggers no
-     routing. It is invisible to the output unless the full breakdown is open.
-
-  WHAT $1,200 DOES NOT DO:
-  - It does not block deals above $1,200 from any path.
-  - It does not create a separate approval tier.
-  - It does not override hard risk rules.
-  All FICO gates, product restrictions, and fraud/default stops apply
-  to every deal regardless of size.
-
---------------------------------------------------------------------------------
-3. PRE-SCREENING VS FORMAL APPROVAL — KEY DISTINCTIONS
---------------------------------------------------------------------------------
-
-  PRE-SCREEN (this tool)              FORMAL APPROVAL (Infinity)
-  ─────────────────────────────────   ─────────────────────────────────
-  Probability-based output            Binding credit decision
-  "Likely in-house"                   "Approved / Declined"
-  No hard inquiry pulled              Credit inquiry triggered
-  Fast — runs on approver inputs      Full application + documents
-  Used before formal application      Final step before contract
-  Guides the sales conversation       Determines contract terms
-  No document collection required    ID + utility bill + pay stub required
-  No DP collected at this stage       DP collected before contract signing
-  Output = recommended path           Output = approved terms or decline
-  Runs same risk logic (calibrated)   Infinity enforces exact thresholds
-
-  IMPORTANT: A favorable pre-screen result is not a commitment to approve.
-  Final approval is subject to formal application, document verification,
-  and Infinity system decision. This tool helps structure the conversation
-  and identify the most likely path before a customer commits to applying.
-
-================================================================================
-File: Daniels_Credit_Simulator_v3.html
-Model: Daniels Hybrid Credit Model v3.0
-Portfolio basis: 2,832 accounts | $4.09M | validated 03/24/2026
-Built: April 2026 | For internal use only
-================================================================================
+DANIELS HOME CENTER — CREDIT PRE-SCREEN TOOL v4.0 (2026-11-09)
+Simulates what Infinity X090 would show: Hybrid rules X001-X005 plus the native
+High Fico (C983) and Credit Line (C992) rules, using the InfinityX risk score.
+It is an estimate, NOT an approval. It never pulls credit.
 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daniels Home Center — Credit Pre-Screen Tool v3.0</title>
+<title>Daniels Home Center — Credit Pre-Screen Tool v4.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -380,6 +285,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
 .ani5{animation:up .3s ease .24s both}
 
 @media(max-width:840px){.wrap{grid-template-columns:1fr}.mg{grid-template-columns:1fr 1fr}.og{grid-template-columns:1fr}}
+.ck{display:flex;gap:8px;align-items:flex-start;font-size:12px;font-weight:500;color:var(--navy);margin:6px 0;cursor:pointer}.ck input{margin-top:2px}.ofr{width:100%;border-collapse:collapse;font-size:12px}.ofr th,.ofr td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.ofr th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--sub)}.ofr .ok{color:#1b7a3d;font-weight:700}.ofr .no{color:#8a1f1f;font-weight:700}.ofr .nat{font-size:10px;background:#e8e4f8;color:#4b3b8a;border-radius:99px;padding:1px 7px;margin-left:4px}.ofr .best{background:#fff7d6}.unk{font-size:11px;color:var(--sub);margin-top:8px}.unk li{margin:3px 0}
 </style>
 </head>
 <body>
@@ -389,7 +295,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
     <div class="top-mark">DHC</div>
     <div>
       <div class="top-name">Daniels Home Center</div>
-      <div class="top-ver">Prequalification Simulator v3.0 — Hybrid Model</div>
+      <div class="top-ver">Prequalification Simulator v4.0 — Infinity Rules</div>
     </div>
   </div>
   <div class="top-pill">Internal Use Only</div>
@@ -414,26 +320,42 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
       </div>
 
       <div class="f">
-        <label>Monthly Income ($) <span class="req">*</span></label>
-        <input type="number" id="income" value="3200" min="0" step="100">
-      </div>
-
-      <div class="f">
-        <label>Income Verified? <span class="req">*</span></label>
+        <label>Customer at Daniels <span class="req">*</span></label>
         <div class="tg-row">
-          <button class="tg yes" id="vy" onclick="tog('ver',true)">✓ Pay stub / W2</button>
-          <button class="tg" id="vn" onclick="tog('ver',false)">✗ Self-declared</button>
+          <button class="tg yes" id="cn" onclick="setCust('new')">New customer</button>
+          <button class="tg" id="ce" onclick="setCust('existing')">Existing / reopening</button>
         </div>
       </div>
 
-      <div class="f">
-        <label>Employment Type</label>
-        <select id="emptype" onchange="updateEdge()">
-          <option value="employed">W2 Employed</option>
-          <option value="selfemployed">Self-Employed / 1099</option>
-          <option value="retired">Retired / SSI / Benefits</option>
-          <option value="none">Unemployed / Other</option>
-        </select>
+      <div id="new-fields">
+        <div class="f">
+          <label>Open trade lines on credit report</label>
+          <input type="number" id="openAccts" value="4" min="0" max="30" step="1">
+          <div class="dp-h">Infinity score: A needs FICO 625+ and 3+ open &middot; B needs 600+ and 2+ &middot; C needs 531+ and 2+</div>
+        </div>
+        <div class="f">
+          <label>Judgment or foreclosure (last 12 mo), or 4+ past-due accounts?</label>
+          <div class="tg-row">
+            <button class="tg" id="gy" onclick="tog('derog',true)">&#9888; Yes</button>
+            <button class="tg yes" id="gn" onclick="tog('derog',false)">&#10003; No</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="existing-fields" style="display:none">
+        <div class="f">
+          <label>Infinity score on the customer's account</label>
+          <select id="scoreOverride">
+            <option value="">Not sure — show A / B / C outcomes</option>
+            <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+            <option value="D">D</option><option value="U">U</option>
+          </select>
+        </div>
+        <div class="f">
+          <label>Available credit line on the account ($)</label>
+          <input type="number" id="creditLine" value="0" min="0" step="100">
+          <div class="dp-h">From the customer screen in Infinity. Needed to check the native Credit Line rule (C992).</div>
+        </div>
       </div>
 
       <div class="f">
@@ -447,13 +369,21 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
       </div>
 
       <div class="f">
-        <label>Credit History (Trade Lines)</label>
-        <select id="tradelines">
-          <option value="strong">Strong — multiple open accounts, no issues</option>
-          <option value="moderate" selected>Moderate — some accounts, minor lates</option>
-          <option value="weak">Weak — very few accounts</option>
-          <option value="thin">Thin File — little or no credit history</option>
+        <label>Employment Type</label>
+        <select id="emptype" onchange="updateEdge()">
+          <option value="employed">W2 Employed</option>
+          <option value="selfemployed">Self-Employed / 1099</option>
+          <option value="retired">Retired / SSI / Benefits</option>
+          <option value="none">Unemployed / Other</option>
         </select>
+      </div>
+
+      <div class="f">
+        <label>Income Verified? <span class="req">*</span></label>
+        <div class="tg-row">
+          <button class="tg yes" id="vy" onclick="tog('ver',true)">✓ Pay stub / W2</button>
+          <button class="tg" id="vn" onclick="tog('ver',false)">✗ Self-declared</button>
+        </div>
       </div>
 
       <div class="sec">Deal Details</div>
@@ -509,10 +439,10 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
         </div>
       </div>
 
-      <div class="sec">Risk Flags</div>
+      <div class="sec">Risk Flags &amp; Exclusions</div>
 
       <div class="f">
-        <label>Prior Daniels Default (last 2 years)?</label>
+        <label>Prior Daniels charge-off / default?</label>
         <div class="tg-row">
           <button class="tg" id="dy" onclick="tog('def',true)">✓ Yes — Prior default</button>
           <button class="tg yes" id="dn" onclick="tog('def',false)">✓ No — Clean</button>
@@ -520,16 +450,11 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
       </div>
 
       <div class="f">
-        <label>Monthly Rent + All Other Debts ($)</label>
-        <input type="number" id="debts" value="1100" min="0" step="50">
-      </div>
-
-      <div class="f">
-        <label>5+ Credit Inquiries in Last 12 Months?</label>
-        <div class="tg-row">
-          <button class="tg" id="iy" onclick="tog('inq',true)">⚠ Yes — 5 or more</button>
-          <button class="tg yes" id="in2" onclick="tog('inq',false)">✓ No — Under 5</button>
-        </div>
+        <label>Check any that apply (Infinity exclusions)</label>
+        <label class="ck"><input type="checkbox" id="x_delinq10"> Currently more than 10 days delinquent at Daniels</label>
+        <label class="ck"><input type="checkbox" id="x_unpaid"> Unpaid returned check, NSF fee or late charge</label>
+        <label class="ck"><input type="checkbox" id="x_cosigner"> Customer needs a co-signer</label>
+        <label class="ck"><input type="checkbox" id="x_late30"> 30-day late on credit report in last 12 months</label>
       </div>
 
       <button class="cta" onclick="calculate()">⚡ Run Pre-Screen</button>
@@ -548,7 +473,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
     </div>
   </div>
 
-  <div class="foot">Daniels Home Center · Credit Pre-Screen Tool v3.0 · Hybrid Model · April 2026 · Internal use only · Portfolio validated: 2,832 accounts $4.09M</div>
+  <div class="foot">Daniels Home Center · Credit Pre-Screen Tool v4.0 · Mirrors Infinity X090 as configured Nov 5, 2026 · Estimate only — not an approval · Internal use only</div>
 </div>
 
 <script>
@@ -558,7 +483,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
 // ════════════════════════════════════════════════════════════
 // MAIN ENGINE
 // ════════════════════════════════════════════════════════════
-const ST = { ver:true, def:false, inq:false };
+const ST = { ver:true, def:false, inq:false, derog:false, cust:'new' };
 
 // ── AMORTIZED MONTHLY PAYMENT ────────────────────────────────────────────────
 // Standard fixed-payment amortization formula, same math used in the actual
@@ -580,19 +505,21 @@ async function calculate() {
   // never downloads the decision rules. This function only collects the
   // form inputs, posts them, and renders whatever comes back.
   const fico       = parseInt(document.getElementById('fico').value);
-  const income     = parseFloat(document.getElementById('income').value)||0;
-  const items      = getDeptItems(); // [{product, amount}, ...] — see addDeptRow()/getDeptItems()
+  const items      = getDeptItems(); // [{product, amount}, ...]
   const purchase   = items.reduce((s,it)=>s+it.amount, 0);
   const tax        = parseFloat(document.getElementById('tax').value)||0;
   const tenure     = parseInt(document.getElementById('tenure').value);
   const dpInput    = parseFloat(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0;
   const termReq    = getTermValue();
-  const debts      = parseFloat(document.getElementById('debts').value)||0;
-  const tradelines = document.getElementById('tradelines').value;
   const emptype    = document.getElementById('emptype').value;
   const verified   = ST.ver;
   const priorDef   = ST.def;
-  const inquiries  = ST.inq;
+  const custType   = ST.cust;
+  const openAccts  = parseInt(document.getElementById('openAccts').value);
+  const derog      = ST.derog && custType==='new';
+  const scoreOverride = document.getElementById('scoreOverride').value;
+  const creditLine = parseFloat(document.getElementById('creditLine').value)||0;
+  const ck = function(id){ return document.getElementById(id).checked; };
 
   if (items.length === 0) {
     const earlyRcol = document.getElementById('rcol');
@@ -605,9 +532,13 @@ async function calculate() {
   const product = items.slice().sort((a,b)=>b.amount-a.amount)[0].product;
 
   const payload = {
-    fico, income, purchase, tax, tenure, product, items,
-    dpInput, termReq, debts, tradelines, emptype,
-    verified, priorDef, inquiries
+    fico, purchase, tax, tenure, product, items,
+    dpInput, termReq, emptype, verified, priorDef,
+    custType, openAccts: isNaN(openAccts)?undefined:openAccts,
+    judgments: derog?1:0, judgBig: derog,
+    scoreOverride: custType==='existing'?scoreOverride:'', creditLine: custType==='existing'?creditLine:0,
+    delinq10: ck('x_delinq10'), unpaid: ck('x_unpaid'), cosigner: ck('x_cosigner'), late30: ck('x_late30'),
+    income: 0, debts: 0
   };
 
   let result;
@@ -616,7 +547,7 @@ async function calculate() {
     rcolEl.innerHTML = '<div class="panel"><div class="idle"><div class="idle-ico">⏳</div><div class="idle-t">Running pre-screen…</div><div class="idle-s">Checking the most likely financing path.</div></div></div>';
   }
   try {
-    const resp = await fetch('https://ecfxeebhtgkbsdeuiueb.supabase.co/functions/v1/credit-prescreen', {
+    const resp = await fetch('https://ecfxeebhtgkbsdeuiueb.supabase.co/functions/v1/credit-prescreen-v4', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -647,8 +578,9 @@ async function calculate() {
     return;
   }
 
+  window.__last = result;
   render(
-    result.decision, result.cls, result.steps, result.tier, result.score,
+    result.decision, result.cls, result.steps, result.tier, result.infinityScore,
     result.dp, result.dpPct, result.term, result.pmt, result.limit, result.apr,
     result.sale, result.dpInput, result.salvage, result.split, result.routing,
     result.dti, result.ltv, result.dtiOK, result.ltvOK, result.dpShort,
@@ -1144,6 +1076,7 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
   const sub={approved:'Most likely path: in-house — high confidence',split:'Most likely: partial in-house + external partner',adjust:'In-house viable with adjusted terms',external:'Most likely path: external financing',declined:'Not viable for in-house — see recommended path',neutral:''};
   const chips={inhouse:'<span class="chip c-ih">🏠 In-House Financing</span>',external:'<span class="chip c-ex">🔄 External Financing</span>',snap:'<span class="chip c-snap">⚠ SNAP / Koalafi Only</span>',split:'<span class="chip c-split">⚡ Split Tender</span>'};
   const ico={pass:'✓',fail:'✗',warn:'!',skip:'—',info:'i',sv:'✦',ec:'◈'};
+  const R=window.__last||{};
 
   // options grid
   let optsH='';
@@ -1156,11 +1089,28 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
     else optsH=`<div class="og ani2"><div class="oc od" style="opacity:.4"><div class="oc-lbl">Path A</div><div class="oc-title">In-House</div><div class="oc-det">Not likely given profile</div></div><div class="oc oc2"><div class="oc-badge">✓ MOST LIKELY</div><div class="oc-lbl">Path B</div><div class="oc-title">External</div><div class="oc-det">${ep}</div></div><div class="oc od" style="opacity:.4"><div class="oc-lbl">Path C</div><div class="oc-title">Not Viable</div><div class="oc-det">If external unavailable</div></div></div>`;
   }
 
+
+  // Infinity offers table
+  let ofH='';
+  if(R.offers){
+    const bestRule = R.policyOffer?R.policyOffer.rule:null;
+    const sysRule = R.infinityBestOffer?R.infinityBestOffer.rule:null;
+    const rows=R.offers.map(o=>{
+      const st=o.eligible?'<span class="ok">✓ Offers</span>':'<span class="no">✗ No</span>';
+      const det=o.eligible?('$'+o.dp.toLocaleString()+' down · '+o.term+'mo · ~$'+o.pmt.toLocaleString()+'/mo'+(o.cap?' · cap $'+Number(o.cap).toLocaleString():'')):(o.why||[]).join('; ');
+      const tags=(o.rule===sysRule&&o.eligible?' ⭐ Infinity Best Offer':'')+(o.rule===bestRule?' ✔ Policy path':'')+(o.eligible&&!o.policyOK?' ⚠ outside policy':'');
+      return '<tr class="'+(o.rule===bestRule?'best':'')+'"><td><strong>'+o.rule+'</strong>'+(o.native?'<span class="nat">native</span>':'')+'<br>'+o.name+'</td><td>'+st+'</td><td>'+det+(tags?'<br><em>'+tags+'</em>':'')+(o.eligible&&!o.policyOK&&o.policyWhy?'<br><span style="color:#8a1f1f">'+o.policyWhy+'</span>':'')+'</td></tr>';
+    }).join('');
+    const scen=R.scenarios?'<div class="unk"><strong>Score not known:</strong> if the account score is A → '+(R.scenarios.A?R.scenarios.A.rule+' $'+R.scenarios.A.dp+' down':'no offer')+' · B → '+(R.scenarios.B?R.scenarios.B.rule+' $'+R.scenarios.B.dp+' down':'no offer')+' · C → '+(R.scenarios.C?R.scenarios.C.rule+' $'+R.scenarios.C.dp+' down':'no offer')+'</div>':'';
+    const unk=(R.unknowns&&R.unknowns.length)?'<details class="unk"><summary>What this estimate cannot see</summary><ul>'+R.unknowns.map(u=>'<li>'+u+'</li>').join('')+'</ul></details>':'';
+    ofH='<div class="wf ani3"><div class="wf-hdr"><span>🧾</span><h3>What Infinity Would Show — Rule by Rule</h3></div><div style="padding:6px 14px 12px"><table class="ofr"><thead><tr><th>Rule</th><th>Result</th><th>Detail</th></tr></thead><tbody>'+rows+'</tbody></table>'+scen+unk+'</div></div>';
+  }
+
   // guardrail alerts
   const grH = guardrailAlerts.length>0 ? guardrailAlerts.map(w=>`<div class="gr-alert"><div class="gr-ico">⚠</div><div class="gr-txt"><strong>Guardrail:</strong> ${w}</div></div>`).join('') : '';
 
   // metrics
-  const mH=tier?`<div class="mg ani3"><div class="mc hl"><div class="mc-lbl">Required DP</div><div class="mc-val">$${(reqDP||dp||0).toLocaleString()}</div><div class="mc-sub">${Math.round(dpPct||0)}% of sale</div></div><div class="mc"><div class="mc-lbl">Monthly Payment</div><div class="mc-val">$${pmt>0?pmt.toLocaleString():'—'}</div><div class="mc-sub">${term}mo · APR ${apr||'—'}%</div></div><div class="mc"><div class="mc-lbl">Credit Limit</div><div class="mc-val">$${Math.round(limit||0).toLocaleString()}</div><div class="mc-sub">Tier ${tier} · Score ${score}</div></div></div><div class="mg2 ani4"><div class="mc"><div class="mc-lbl">Amount Financed</div><div class="mc-val">$${Math.round(financed||0).toLocaleString()}</div><div class="mc-sub">Sale $${Math.round(sale).toLocaleString()} − DP $${(reqDP||dp||0).toLocaleString()}</div></div><div class="mc${dtiOK===false||ltvOK===false?' warn':''}"><div class="mc-lbl">DTI / LTV</div><div class="mc-val" style="font-size:16px">${dti!=null?parseFloat(dti).toFixed(0):'—'}% / ${ltv!=null?parseFloat(ltv).toFixed(0):'—'}%</div><div class="mc-sub">${dtiOK===false?'⚠ DTI over limit':ltvOK===false?'⚠ LTV over limit':'Within limits'}</div></div></div>` : '';
+  const mH=tier?`<div class="mg ani3"><div class="mc hl"><div class="mc-lbl">Required DP</div><div class="mc-val">$${(reqDP||dp||0).toLocaleString()}</div><div class="mc-sub">${Math.round(dpPct||0)}% of sale</div></div><div class="mc"><div class="mc-lbl">Monthly Payment</div><div class="mc-val">$${pmt>0?pmt.toLocaleString():'—'}</div><div class="mc-sub">${term}mo · APR ${apr||'—'}%</div></div><div class="mc"><div class="mc-lbl">Infinity Score</div><div class="mc-val">${score||'—'}</div><div class="mc-sub">Rule ${(R.policyOffer&&R.policyOffer.rule)||'—'}${limit?' · cap $'+Math.round(limit).toLocaleString():''}</div></div></div><div class="mg2 ani4"><div class="mc"><div class="mc-lbl">Amount Financed</div><div class="mc-val">$${Math.round(financed||0).toLocaleString()}</div><div class="mc-sub">Sale $${Math.round(sale).toLocaleString()} − DP $${(reqDP||dp||0).toLocaleString()}</div></div><div class="mc"><div class="mc-lbl">Infinity may show</div><div class="mc-val" style="font-size:16px">${R.infinityBestOffer?R.infinityBestOffer.rule+' · $'+R.infinityBestOffer.dp+' down':'No offer'}</div><div class="mc-sub">Best Offer (estimated) — collect the policy DP</div></div></div>` : '';
 
   // shortfall
   const sfH=dpShort>0&&tier?`<div class="sf ani4"><div style="font-size:22px">💰</div><div><div class="sf-t">Down Payment Shortfall</div><div class="sf-b">Customer needs <strong>$${dpShort.toLocaleString()} more</strong> — total $${(reqDP||dp||0).toLocaleString()} required.</div><div class="sf-n">Say: "We need $${(reqDP||dp||0).toLocaleString()} down today. Can you do that?"</div></div></div>`:'';
@@ -1181,7 +1131,7 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
 
   document.getElementById('rcol').innerHTML=`
     <div class="db ${cls} ani"><div class="db-lbl">Pre-Screen Result</div><div class="db-main">${decision}</div><div class="db-sub">${sub[cls]||''}</div>${routing?chips[routing]||'':''}</div>
-    ${optsH}${grH}${mH}${sfH}${scH}${svH}${spH}${ecH}${wfH}`;
+    ${optsH}${grH}${mH}${ofH}${sfH}${scH}${svH}${spH}${ecH}${wfH}`;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1315,21 +1265,28 @@ function onProd(){hDP(parseInt(document.getElementById('dpman').value)||parseInt
 function updateEdge(){}
 function tog(k,v){
   ST[k]=v;
-  const m={ver:['vy','vn','yes',''],def:['dy','dn','no','yes'],inq:['iy','in2','no','yes']};
+  const m={ver:['vy','vn','yes',''],def:['dy','dn','no','yes'],derog:['gy','gn','no','yes']};
   const[yi,ni,yc,nc]=m[k];
   document.getElementById(yi).className='tg '+(v?yc:'');
   document.getElementById(ni).className='tg '+(!v?nc:'');
 }
+function setCust(v){
+  ST.cust=v;
+  document.getElementById('cn').className='tg '+(v==='new'?'yes':'');
+  document.getElementById('ce').className='tg '+(v==='existing'?'yes':'');
+  document.getElementById('new-fields').style.display=v==='new'?'':'none';
+  document.getElementById('existing-fields').style.display=v==='existing'?'':'none';
+}
 function resetAll(){
   document.getElementById('fico').value=640;document.getElementById('fv').textContent='640';document.getElementById('fv').className='sl-num';
-  document.getElementById('income').value=3200;document.getElementById('purchase').value=1800;document.getElementById('tax').value=8.0;
+  document.getElementById('purchase').value=1800;document.getElementById('tax').value=8.0;
   document.getElementById('dpsl').value=300;document.getElementById('dpman').value='';document.getElementById('dpv').textContent='$300';
   document.getElementById('dph').textContent='Adjust slider or enter below';document.getElementById('dph').style.color='var(--steel)';
   document.getElementById('term').value=18;document.getElementById('tv').textContent='18 mo';document.getElementById('term-manual').value='';highlightTermChip(18);
   document.getElementById('dept-rows').innerHTML='';addDeptRow('furniture',1800);document.getElementById('tenure').value='18';
-  document.getElementById('debts').value=1100;document.getElementById('tradelines').value='moderate';
+  document.getElementById('openAccts').value=4;document.getElementById('creditLine').value=0;document.getElementById('scoreOverride').value='';['x_delinq10','x_unpaid','x_cosigner','x_late30'].forEach(function(i){document.getElementById(i).checked=false;});setCust('new');
   document.getElementById('emptype').value='employed';
-  tog('ver',true);tog('def',false);tog('inq',false);
+  tog('ver',true);tog('def',false);tog('derog',false);
   document.getElementById('rcol').innerHTML='<div class="panel"><div class="idle"><div class="idle-ico">🏠</div><div class="idle-t">Ready to evaluate</div><div class="idle-s">Enter customer details on the left and press <strong>Run Pre-Screen</strong>.</div></div></div>';
 }
 
