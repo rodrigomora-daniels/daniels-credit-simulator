@@ -305,6 +305,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .rst{font-size:13px;padding:14px}details.more>summary{padding:16px 0;font-size:14px}details.how>summary{padding:18px 16px;font-size:14px}
 #bar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:300;background:var(--navy);color:#fff;padding:12px 16px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,.25);align-items:center;justify-content:space-between;gap:12px;font-size:16px;font-weight:700;cursor:pointer}#bar small{font-size:11px;font-weight:600;opacity:.7;display:block}#bar .go{background:#fff;color:var(--navy);border-radius:20px;padding:10px 16px;font-size:13px}
 @media(max-width:840px){#bar.show{display:flex}body{padding-bottom:84px}}
+.top-r{display:flex;align-items:center;gap:12px}.lang{display:flex;background:rgba(255,255,255,.12);border-radius:22px;padding:3px}.lang button{min-width:52px;height:38px;border:none;border-radius:19px;background:none;color:rgba(255,255,255,.75);font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation}.lang button.on{background:#fff;color:var(--navy)}@media(max-width:560px){.top-pill{display:none}}
 </style>
 </head>
 <body>
@@ -317,7 +318,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <div class="top-ver">Quick pre-screen v4.2 — mirrors Infinity</div>
     </div>
   </div>
-  <div class="top-pill">Internal Use Only</div>
+  <div class="top-r"><div class="lang"><button type="button" id="lang-en" onclick="setLang('en')">EN</button><button type="button" id="lang-es" onclick="setLang('es')">ES</button></div><div class="top-pill">Internal Use Only</div></div>
 </div>
 
 <div class="wrap">
@@ -468,6 +469,102 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 // ════════════════════════════════════════════════════════════
 // MAIN ENGINE
 // ════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════
+// LANGUAGE (EN / ES) — sales-floor toggle, remembered per tablet
+// ════════════════════════════════════════════════════════════
+let LANG='en';
+try{ LANG=localStorage.getItem('dhc_lang')||((navigator.language||'').toLowerCase().startsWith('es')?'es':'en'); }catch(e){}
+const ES={
+'Quick pre-screen v4.2 — mirrors Infinity':'Pre-evaluación rápida v4.2 — refleja Infinity','Internal Use Only':'Uso interno',
+'Quick check — 3 steps':'Revisión rápida — 3 pasos','What are they buying?':'¿Qué va a comprar?','Total before tax:':'Total antes de impuesto:',
+'Who is the customer?':'¿Quién es el cliente?','New to Daniels':'Cliente nuevo','Has an account':'Ya tiene cuenta',
+'FICO score':'Puntaje FICO','type it or tap a range':'escríbelo o toca un rango',
+'Credit line available on the account':'Línea de crédito disponible en la cuenta','from the customer screen':'de la pantalla del cliente',
+'Account score':'Score de la cuenta','only if you can see it':'solo si lo puedes ver',
+'Down payment':'Enganche','optional — leave empty to see what is needed':'opcional — déjalo vacío para ver cuánto se necesita',
+'e.g. 620':'ej. 620','$0 if none':'$0 si no tiene','Custom amount':'Otro monto','Auto — estimated from FICO':'Auto — estimado con el FICO',
+'More details (optional)':'Más detalles (opcional)','Clear — next customer':'Limpiar — siguiente cliente',
+'Open trade lines on credit report (leave blank unless you know it)':'Cuentas abiertas en el reporte de crédito (déjalo vacío si no lo sabes)',
+'Infinity score: A needs FICO 625+ and 3+ open · B needs 600+ and 2+ · C needs 531+ and 2+':'Score Infinity: A requiere FICO 625+ y 3+ abiertas · B 600+ y 2+ · C 531+ y 2+',
+'Judgment or foreclosure (last 12 mo), or 4+ past-due accounts?':'¿Juicio o ejecución hipotecaria (últimos 12 meses), o 4+ cuentas vencidas?',
+'⚠ Yes':'⚠ Sí','✓ No':'✓ No','Loyalty / Tenure at Daniels':'Antigüedad en Daniels',
+'New — 0 to 5 months':'Nuevo — 0 a 5 meses','6 to 11 months':'6 a 11 meses','12 to 23 months':'12 a 23 meses','24 months or more':'24 meses o más',
+'Employment Type':'Tipo de empleo','W2 Employed':'Empleado (W2)','Self-Employed / 1099':'Cuenta propia / 1099','Retired / SSI / Benefits':'Jubilado / SSI / beneficios','Unemployed / Other':'Desempleado / otro',
+'Income Verified?':'¿Ingreso verificado?','✓ Pay stub / W2':'✓ Talón de pago / W2','✗ Self-declared':'✗ Declarado por el cliente',
+'Tax Rate (%)':'Impuesto (%)','Requested Term (months)':'Plazo solicitado (meses)',
+'Prior Daniels charge-off / default?':'¿Cuenta anterior en Daniels cancelada por impago?','✓ Yes — Prior default':'✓ Sí — con impago previo','✓ No — Clean':'✓ No — limpio',
+'Check any that apply (Infinity exclusions)':'Marca lo que aplique (exclusiones de Infinity)',
+'Currently more than 10 days delinquent at Daniels':'Actualmente con más de 10 días de atraso en Daniels',
+'Unpaid returned check, NSF fee or late charge':'Cheque devuelto sin pagar, cargo NSF o recargo por atraso',
+'Customer needs a co-signer':'El cliente necesita un co-signer (codeudor)',
+'30-day late on credit report in last 12 months':'Atraso de 30 días en el reporte en los últimos 12 meses',
+'See result ↓':'Ver resultado ↓',
+'Daniels Home Center · Credit Pre-Screen v4.2 · Mirrors Infinity X090 as configured Nov 5, 2026 · Estimate only — not an approval · Internal use only':'Daniels Home Center · Pre-evaluación de crédito v4.2 · Refleja Infinity X090 según su configuración del 5 nov 2026 · Solo estimado — no es una aprobación · Uso interno',
+// dynamic labels
+'Furniture':'Muebles','Mattress':'Colchón','Appliances':'Electrodomésticos','Electronics / TV':'Electrónicos / TV','Seasonal (A/C, heater)':'De temporada (A/C, calentador)','iPhone / Apple':'iPhone / Apple','Accessories':'Accesorios',
+'Under 530':'Menos de 530','Not sure':'No sé',
+'Fill in the 3 steps':'Llena los 3 pasos','Purchase and FICO are enough. The result shows up here on its own.':'Con la compra y el FICO basta. El resultado aparece solo aquí.','Checking…':'Revisando…'
+};
+function tr(s){ return (LANG==='es' && ES[s]) || s; }
+function L(en,es){ return LANG==='es'?es:en; }
+function applyStatic(){
+  document.documentElement.lang=LANG;
+  const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:n=>{const p=n.parentNode&&n.parentNode.nodeName;return (p==='SCRIPT'||p==='STYLE'||!n.nodeValue.trim())?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;}});
+  const nodes=[];while(w.nextNode())nodes.push(w.currentNode);
+  nodes.forEach(n=>{
+    if(n.__en===undefined) n.__en=n.nodeValue;
+    const lead=n.__en.match(/^\s*/)[0], trail=n.__en.match(/\s*$/)[0], key=n.__en.trim().replace(/\s+/g,' ');
+    n.nodeValue = (LANG==='es' && ES[key]) ? lead+ES[key]+trail : n.__en;
+  });
+  document.querySelectorAll('[placeholder]').forEach(el=>{ if(el.__enph===undefined) el.__enph=el.getAttribute('placeholder'); el.setAttribute('placeholder', (LANG==='es'&&ES[el.__enph])||el.__enph); });
+  const b=document.getElementById('lang-en'), c=document.getElementById('lang-es');
+  if(b&&c){ b.classList.toggle('on',LANG==='en'); c.classList.toggle('on',LANG==='es'); }
+}
+function setLang(l){
+  LANG=l; try{localStorage.setItem('dhc_lang',l);}catch(e){}
+  applyStatic(); renderCats(); renderFicoChips(parseInt(document.getElementById('fico').value)?ficoRangeOf(parseInt(document.getElementById('fico').value)):null); renderScoreChips(); renderDpChips();
+  hDP(parseFloat(document.getElementById('dpman').value)||0);
+  if(window.__renderArgs) render.apply(null,window.__renderArgs); else idleResult();
+}
+function guardES(w){
+  const C992='⚠ Infinity’s native Credit Line rule (C992) can auto-approve a customer even when this pre-screen says external. A system approval is NOT proof the deal fits policy — always verify the down payment, ID and income before releasing goods.';
+  if(w===C992) return '⚠ La regla nativa Credit Line (C992) de Infinity puede aprobar automáticamente a un cliente aunque esta pre-evaluación diga externo. Una aprobación del sistema NO prueba que la operación cumpla la política — siempre verifica el enganche, ID e ingresos antes de entregar la mercancía.';
+  let m;
+  if((m=w.match(/^Infinity may show \$(\d+) down \(Credit Line C992\) as its Best Offer\. Policy down payment for this deal is \$(\d+) — collect that amount\.$/))) return 'Infinity puede mostrar $'+m[1]+' de enganche (Credit Line C992) como su Best Offer. El enganche según la política para esta operación es $'+m[2]+' — cobra esa cantidad.';
+  if((m=w.match(/^Infinity would offer this deal \((\w+)\), but Daniels policy prohibits it\. A system offer here is NOT an approval\.$/))) return 'Infinity ofrecería esta operación ('+m[1]+'), pero la política de Daniels no lo permite. Una oferta del sistema aquí NO es una aprobación.';
+  const map={'No verifiable income source — the approver will require income documentation.':'Sin fuente de ingreso verificable — el aprobador pedirá comprobantes de ingreso.','5+ credit inquiries in 12 months — approver risk flag.':'5+ consultas de crédito en 12 meses — alerta de riesgo para el aprobador.','Score C at FICO 600+: Infinity has no automatic rule for this — expect manual review.':'Score C con FICO 600+: Infinity no tiene regla automática para esto — espera revisión manual.'};
+  return map[w]||w;
+}
+function scriptES(cls,dp,monthly,term,salvage,split,fico,shortfall){
+  const $=n=>'$'+Math.round(n||0).toLocaleString();
+  const S={
+    approved:{quote:'"Con lo que me comentas, esto se ve como una buena opción para nuestro programa de financiamiento. Probablemente necesitarías '+$(dp)+' de enganche y el pago sería de unos '+$(monthly)+' al mes por '+term+' meses. ¿Te funciona?"',
+      steps:[{n:1,t:'Confirma el enganche estimado',d:'<strong>'+$(dp)+' de enganche</strong> es lo más probable. Dile al cliente que es lo que se necesita al firmar el contrato.'},
+             {n:2,t:'Revisa la mensualidad estimada',d:'Alrededor de <strong>'+$(monthly)+' al mes</strong> por '+term+' meses. Confirma que le cuadra con su presupuesto.'},
+             {n:3,t:'Siguiente paso: solicitud formal',d:'La pre-evaluación se ve favorable. Pasa a la solicitud completa — el cliente necesitará ID, comprobante de domicilio y talón de pago. Verifica tú el enganche y los documentos; no te apoyes solo en la aprobación del sistema.'}]},
+    adjust:{quote:salvage?'"Esto puede funcionar con un pequeño ajuste. Si puedes poner '+$(salvage.dp)+' de enganche, el pago estimado sería de unos '+$(salvage.pmt)+' al mes por '+salvage.term+' meses. ¿Es algo que podrías manejar?"':'"Está cerca — un pequeño ajuste al enganche o al plazo podría hacerlo funcionar. ¿Vemos las opciones?"',
+      steps:salvage?[{n:1,t:'Enganche estimado: '+$(salvage.dp),d:'Es la cantidad que hace probable el financiamiento in-house. Pregunta: <strong>"¿Podrías traer '+$(salvage.dp)+' al momento de la compra?"</strong>'},
+                     {n:2,t:'Plazo sugerido: '+salvage.term+' meses',d:'Pago estimado: <strong>'+$(salvage.pmt)+'/mes</strong>. Esta estructura se mantiene dentro de las guías del programa.'},
+                     {n:3,t:'Si no tiene ese enganche',d:'Conviene explorar un financiamiento dividido o un socio financiero externo.'}]
+       :[{n:1,t:'Un enganche mayor ayudaría',d:'Unos '+$(shortfall)+' más mejorarían mucho el resultado. Pregunta si es posible.'},
+         {n:2,t:'Considera un plazo más corto',d:'Un plazo menor puede dejar la operación en rango. Prueba ajustar 6 meses.'},
+         {n:3,t:'O una compra más pequeña',d:'Un precio menor puede calificar mejor para financiamiento in-house.'}]},
+    split:{quote:split?'"Hay una opción de financiamiento que puede funcionar muy bien — nosotros manejaríamos '+$(split.danielsAmt)+' con nuestro programa y un socio cubriría el resto. Igual te llevas tu compra a casa. ¿Te explico cómo se vería?"':'"Un financiamiento dividido podría ser lo mejor — una parte con nosotros y otra con un socio. ¿Te explico cómo funciona?"',
+      steps:split?[{n:1,t:'Nuestro programa: aprox. '+$(split.danielsAmt),d:'Es la parte que probablemente financiaríamos in-house, con las condiciones normales del programa.'},
+                   {n:2,t:'Programa del socio: aprox. '+$(split.extAmt)+' con '+(split.partner||'el socio financiero'),d:'Mandaríamos una solicitud aparte a '+(split.partner||'nuestro socio financiero')+' por esta parte. Es un proceso rápido.'},
+                   {n:3,t:'Se necesitan los dos acuerdos al comprar',d:'Se requiere la aprobación final de ambos programas antes de entregar la mercancía. Se confirma en la solicitud formal.'}]:[]},
+    external:{quote:fico<600?'"Por tu perfil, uno de nuestros socios financieros probablemente sea la mejor opción. Trabajan con muchas situaciones y el proceso es sencillo. ¿Te oriento hacia allá?"':'"Para una compra como esta, nuestro socio Synchrony probablemente es la mejor opción. Tienen programas competitivos y el proceso suele ser rápido. ¿Te interesa explorarlo?"',
+      steps:[{n:1,t:'Ruta probable: '+(fico<600?'SNAP / Koalafi':'Synchrony / WF'),d:'Según esta pre-evaluación, un socio financiero externo es lo más probable. Lo referimos a su programa para la solicitud completa.'},
+             {n:2,t:'Maneja bien la expectativa',d:'Dile al cliente que es un programa de un socio — separado de nuestro financiamiento in-house, pero igual es una buena opción.'},
+             {n:3,t:'Anota el resultado de la pre-evaluación',d:'Registra este resultado para que el aprobador tenga contexto cuando llegue la solicitud formal.'}]},
+    declined:{quote:'"Con lo que me compartes, nuestros programas de financiamiento quizá no sean la mejor opción por ahora. Quiero ser claro, pero también que sepas qué opciones tienes de aquí en adelante."',
+      steps:[{n:1,t:'Da el resultado con claridad y respeto',d:'Es una pre-evaluación, no una decisión permanente. Al cliente no se le niega todo — solo el programa actual bajo las condiciones actuales.'},
+             {n:2,t:'Da una razón simple y no técnica',d:'Ejemplo: "Nuestro programa tiene requisitos específicos que por ahora no se cumplen". <strong>No</strong> menciones umbrales internos de score.'},
+             {n:3,t:'Ofrece un camino constructivo',d:'Si hay una opción externa como SNAP, menciónala. Si no, sugiere pasos que mejoren el perfil con el tiempo.'}]}
+  };
+  return S[cls]||S.external;
+}
 const ST = { ver:true, def:false, inq:false, derog:false, cust:'new' };
 
 // ── AMORTIZED MONTHLY PAYMENT ────────────────────────────────────────────────
@@ -586,14 +683,15 @@ async function calculate() {
   }
   if (mySeq !== reqSeq) return;
   if (rcolEl) rcolEl.style.opacity='';
-  render(
+  window.__renderArgs=[
     result.decision, result.cls, result.steps, result.tier, result.infinityScore,
     result.dp, result.dpPct, result.term, result.pmt, result.limit, result.apr,
     result.sale, result.dpInput, result.salvage, result.split, result.routing,
     result.dti, result.ltv, result.dtiOK, result.ltvOK, result.dpShort,
     result.financed, result.reqDP, result.edgeCases, result.guardrailAlerts,
     result.script
-  );
+  ];
+  render.apply(null, window.__renderArgs);
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -1114,16 +1212,18 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
   }
 
   // guardrail alerts
-  const grH = guardrailAlerts.length>0 ? guardrailAlerts.map(w=>`<div class="gr-alert"><div class="gr-ico">⚠</div><div class="gr-txt"><strong>Guardrail:</strong> ${w}</div></div>`).join('') : '';
+  const grH = guardrailAlerts.length>0 ? guardrailAlerts.map(w=>`<div class="gr-alert"><div class="gr-ico">⚠</div><div class="gr-txt"><strong>${L('Guardrail:','Alerta:')}</strong> ${LANG==='es'?guardES(w):w}</div></div>`).join('') : '';
 
   // metrics
   const mH=tier?`<div class="mg ani3"><div class="mc hl"><div class="mc-lbl">Required DP</div><div class="mc-val">$${(reqDP||dp||0).toLocaleString()}</div><div class="mc-sub">${Math.round(dpPct||0)}% of sale</div></div><div class="mc"><div class="mc-lbl">Monthly Payment</div><div class="mc-val">$${pmt>0?pmt.toLocaleString():'—'}</div><div class="mc-sub">${term}mo · APR ${apr||'—'}%</div></div><div class="mc"><div class="mc-lbl">Infinity Score</div><div class="mc-val">${score||'—'}</div><div class="mc-sub">Rule ${(R.policyOffer&&R.policyOffer.rule)||'—'}${limit?' · cap $'+Math.round(limit).toLocaleString():''}</div></div></div><div class="mg2 ani4"><div class="mc"><div class="mc-lbl">Amount Financed</div><div class="mc-val">$${Math.round(financed||0).toLocaleString()}</div><div class="mc-sub">Sale $${Math.round(sale).toLocaleString()} − DP $${(reqDP||dp||0).toLocaleString()}</div></div><div class="mc"><div class="mc-lbl">Infinity may show</div><div class="mc-val" style="font-size:16px">${R.infinityBestOffer?R.infinityBestOffer.rule+' · $'+R.infinityBestOffer.dp+' down':'No offer'}</div><div class="mc-sub">Best Offer (estimated) — collect the policy DP</div></div></div>` : '';
 
   // shortfall
-  const sfH=dpShort>0&&tier&&!window.__dpBlank?`<div class="sf ani4"><div style="font-size:22px">💰</div><div><div class="sf-t">Down Payment Shortfall</div><div class="sf-b">Customer needs <strong>$${dpShort.toLocaleString()} more</strong> — total $${(reqDP||dp||0).toLocaleString()} required.</div><div class="sf-n">Say: "We need $${(reqDP||dp||0).toLocaleString()} down today. Can you do that?"</div></div></div>`:'';
+  const sfH=dpShort>0&&tier&&!window.__dpBlank?`<div class="sf ani4"><div style="font-size:22px">💰</div><div><div class="sf-t">${L('Down Payment Shortfall','Falta de enganche')}</div><div class="sf-b">${L('Customer needs <strong>$'+dpShort.toLocaleString()+' more</strong> — total $'+(reqDP||dp||0).toLocaleString()+' required.','El cliente necesita <strong>$'+dpShort.toLocaleString()+' más</strong> — se requiere un total de $'+(reqDP||dp||0).toLocaleString()+'.')}</div><div class="sf-n">${L('Say: "We need $'+(reqDP||dp||0).toLocaleString()+' down today. Can you do that?"','Dile: "Necesitamos $'+(reqDP||dp||0).toLocaleString()+' de enganche hoy. ¿Lo puedes dar?"')}</div></div></div>`:'';
 
   // sales script
-  const scH=script?`<div class="script-card ani4"><div class="script-hdr ${cls}"><span>💬</span><h3>Conversation Guide</h3></div><div class="script-body"><div class="script-quote ${cls}">${script.quote}</div><div class="script-steps">${(script.steps||[]).map(s=>`<div class="script-step"><div class="sc-dot">${s.n}</div><div class="sc-txt"><strong>${s.t}</strong><br>${s.d}</div></div>`).join('')}</div></div></div>`:'';
+  const P0=(window.__last||{}).policyOffer;
+  if(script&&LANG==='es'){ const fv0=parseInt(document.getElementById('ficoNum').value)||0; script=scriptES(cls,(P0&&P0.dp)||dp,(P0&&P0.pmt)||pmt,(P0&&P0.term)||term,salvage,split,fv0,dpShort); }
+  const scH=script?`<div class="script-card ani4"><div class="script-hdr ${cls}"><span>💬</span><h3>${L('Conversation Guide','Guía de conversación')}</h3></div><div class="script-body"><div class="script-quote ${cls}">${script.quote}</div><div class="script-steps">${(script.steps||[]).map(s=>`<div class="script-step"><div class="sc-dot">${s.n}</div><div class="sc-txt"><strong>${s.t}</strong><br>${s.d}</div></div>`).join('')}</div></div></div>`:'';
 
   // salvage card
   const svH=salvage?`<div class="sv-card ani5"><div class="sv-hdr green"><span>🔧</span><h3>Deal Structuring — How to Make In-House Likely</h3></div><div class="sv-body"><div class="sv-row"><div class="sv-n g">1</div><div><div class="sv-title">Raise down payment to $${salvage.dp.toLocaleString()}</div><div class="sv-det">Ask: <em>"Can you bring $${salvage.dp.toLocaleString()} today?"</em> This is the amount that makes in-house financing most likely viable.</div></div></div><div class="sv-row"><div class="sv-n g">2</div><div><div class="sv-title">Set term to ${salvage.term} months</div><div class="sv-det">Payment = $${salvage.pmt}/mo. DTI = ${salvage.dti}% — within limit.</div></div></div><div class="sv-row"><div class="sv-n g">3</div><div><div class="sv-title">If this down payment is not available</div><div class="sv-det">A split financing option or external partner would be the next option to explore.</div></div></div></div></div>`:'';
@@ -1137,28 +1237,31 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
   const wfH=`<div class="wf ani5"><div class="wf-hdr"><span>📊</span><h3>Prequalification Breakdown — Evaluation Path</h3></div>${steps.map((s,i)=>`<div class="ws"><div class="sb ${s.s}">${ico[s.s]||'·'}</div><div style="flex:1;min-width:0"><div class="wn">Step ${i+1} · ${s.n}</div><div class="wd">${s.d}</div>${s.note?`<div class="wnt">${s.note}</div>`:''}</div></div>`).join('')}</div>`;
 
   const P=R.policyOffer, usd=n=>'$'+Math.round(n||0).toLocaleString();
-  const head={approved:'Looks good — likely approved in-house',adjust:'Likely approved in-house',split:'Part in-house, part with a partner',external:'Likely a partner program',declined:'Not a fit for financing right now'}[cls]||decision;
+  const head=L({approved:'Looks good — likely approved in-house',adjust:'Likely approved in-house',split:'Part in-house, part with a partner',external:'Likely a partner program',declined:'Not a fit for financing right now'}[cls]||decision,
+               {approved:'Se ve bien — probable aprobación in-house',adjust:'Probable aprobación in-house',split:'Parte in-house, parte con un socio financiero',external:'Probable programa de socio financiero',declined:'Por ahora no califica para financiamiento'}[cls]||decision);
   const ep=(parseInt(document.getElementById('ficoNum').value)||parseInt(document.getElementById('fico').value)||0)<600?'SNAP / Koalafi':'Synchrony / WF';
+  const mo=L('mo','meses'), dwn=L('down','de enganche'), pm=L('/mo','/mes');
   let big='';
   if(P&&(cls==='approved'||cls==='adjust')){
     const po=(R.offers||[]).find(o=>o.rule===P.rule)||{}; const lineAmt=po.cap||window.__line||0;
     const alts=(R.offers||[]).filter(o=>o.eligible&&o.policyOK&&o.rule!==P.rule&&o.term>P.term).sort((a,b)=>a.dp-b.dp||b.term-a.term).slice(0,2);
-    const altH=alts.length?`<div class="alts"><b>Other options</b>${alts.map(o=>`<div>${o.term} mo · ${usd(o.dp)} down · ~${usd(o.pmt)}/mo <span>${o.rule}</span></div>`).join('')}</div>`:'';
-    big=`<div class="hero-nums"><div><small>${window.__dpBlank?'Down needed':'Down today'}</small><b>${usd(P.dp)}</b></div><div><small>Monthly</small><b>${usd(P.pmt)}</b></div><div><small>Term</small><b>${P.term} mo</b></div>${lineAmt?`<div><small>Credit line up to</small><b>${usd(lineAmt)}</b></div>`:''}</div>`+
-        (window.__dpBlank?'':(dpShort>0?`<div class="hero-note warn">Customer needs <strong>${usd(dpShort)} more</strong> down to get there.</div>`:`<div class="hero-note ok">The down payment on hand covers it.</div>`))+altH;
+    const altH=alts.length?`<div class="alts"><b>${L('Other options','Otras opciones')}</b>${alts.map(o=>`<div>${o.term} ${mo} · ${usd(o.dp)} ${dwn} · ~${usd(o.pmt)}${pm} <span>${o.rule}</span></div>`).join('')}</div>`:'';
+    big=`<div class="hero-nums"><div><small>${window.__dpBlank?L('Down needed','Enganche necesario'):L('Down today','Enganche hoy')}</small><b>${usd(P.dp)}</b></div><div><small>${L('Monthly','Mensualidad')}</small><b>${usd(P.pmt)}</b></div><div><small>${L('Term','Plazo')}</small><b>${P.term} ${mo}</b></div>${lineAmt?`<div><small>${L('Credit line up to','Línea de crédito hasta')}</small><b>${usd(lineAmt)}</b></div>`:''}</div>`+
+        (window.__dpBlank?'':(dpShort>0?`<div class="hero-note warn">${L('Customer needs <strong>'+usd(dpShort)+' more</strong> down to get there.','El cliente necesita <strong>'+usd(dpShort)+' más</strong> de enganche para lograrlo.')}</div>`:`<div class="hero-note ok">${L('The down payment on hand covers it.','El enganche que trae alcanza.')}</div>`))+altH;
   } else if(cls==='split'&&split){
     big=`<div class="hero-nums"><div><small>In-house</small><b>${usd(split.danielsAmt)}</b></div><div><small>${split.partner}</small><b>${usd(split.extAmt)}</b></div></div>`;
   } else if(cls==='external'||cls==='declined'){
-    big=`<div class="hero-note">${cls==='external'?'Suggested next step: '+ep+'.':'Nothing in-house fits today. Offer '+ep+' or a smaller purchase.'}</div>`;
+    big=`<div class="hero-note">${cls==='external'?L('Suggested next step: '+ep+'.','Siguiente paso sugerido: '+ep+'.'):L('Nothing in-house fits today. Offer '+ep+' or a smaller purchase.','Nada in-house encaja hoy. Ofrece '+ep+' o una compra más pequeña.')}</div>`;
   }
+  const thinH=window.__thin?`<div class="hero-note warn">${L('If the credit file is thin (under 3 open accounts): ','Si el historial es delgado (menos de 3 cuentas abiertas): ')}${window.__thin.offer?(L('score ','score ')+window.__thin.score+' → '+window.__thin.offer.rule+', '+usd(window.__thin.offer.dp)+' '+dwn+', '+window.__thin.offer.term+' '+mo+', ~'+usd(window.__thin.offer.pmt)+pm+'.'):('score '+window.__thin.score+' → '+L('no in-house offer.','sin oferta in-house.'))}</div>`:'';
   document.getElementById('rcol').innerHTML=`
-    <div class="db ${cls} ani"><div class="db-lbl">Pre-Screen Result</div><div class="db-main">${head}</div>${big}${window.__thin?`<div class="hero-note warn">If the credit file is thin (under 3 open accounts): ${window.__thin.offer?('score '+window.__thin.score+' → '+window.__thin.offer.rule+', '+usd(window.__thin.offer.dp)+' down, '+window.__thin.offer.term+' mo, ~'+usd(window.__thin.offer.pmt)+'/mo.'):('score '+window.__thin.score+' → no in-house offer.')}</div>`:''}<div class="hero-fine">Estimate only — it does not pull credit. Final approval happens in Infinity.</div></div>
+    <div class="db ${cls} ani"><div class="db-lbl">${L('Pre-Screen Result','Resultado de la pre-evaluación')}</div><div class="db-main">${head}</div>${big}${thinH}<div class="hero-fine">${L('Estimate only — it does not pull credit. Final approval happens in Infinity.','Solo un estimado — no consulta el crédito. La aprobación final se hace en Infinity.')}</div></div>
     ${grH}${sfH}${scH}
-    <details class="how"><summary>See how this was calculated</summary>${optsH}${mH}${ofH}${svH}${spH}${ecH}${wfH}</details>`;
+    <details class="how"><summary>${L('See how this was calculated','Ver cómo se calculó (detalle técnico, en inglés)')}</summary>${optsH}${mH}${ofH}${svH}${spH}${ecH}${wfH}</details>`;
   (function(){const b=document.getElementById('bar');if(!b)return;
-    if(P&&(cls==='approved'||cls==='adjust')){document.getElementById('bar-l').textContent=window.__dpBlank?'Down needed':'Down today';document.getElementById('bar-t').textContent=usd(P.dp)+' · '+usd(P.pmt)+'/mo · '+P.term+' mo';b.classList.add('show');}
-    else if(cls==='split'&&split){document.getElementById('bar-l').textContent='Result';document.getElementById('bar-t').textContent='Part in-house + partner';b.classList.add('show');}
-    else {document.getElementById('bar-l').textContent='Result';document.getElementById('bar-t').textContent=head;b.classList.add('show');}
+    if(P&&(cls==='approved'||cls==='adjust')){document.getElementById('bar-l').textContent=window.__dpBlank?L('Down needed','Enganche necesario'):L('Down today','Enganche hoy');document.getElementById('bar-t').textContent=usd(P.dp)+' · '+usd(P.pmt)+pm+' · '+P.term+' '+mo;b.classList.add('show');}
+    else if(cls==='split'&&split){document.getElementById('bar-l').textContent=L('Result','Resultado');document.getElementById('bar-t').textContent=L('Part in-house + partner','Parte in-house + socio');b.classList.add('show');}
+    else {document.getElementById('bar-l').textContent=L('Result','Resultado');document.getElementById('bar-t').textContent=head;b.classList.add('show');}
   })();
 }
 
@@ -1180,10 +1283,10 @@ function chipHtml(label, on, fn, arg){ return `<button type="button" class="chip
 
 // ── Step 1: purchase ─────────────────────────────────────────────────────────
 function renderCats(){
-  document.getElementById('cat-chips').innerHTML = Object.entries(DEPT_LABELS).map(([k,l])=>chipHtml(l, k in CART, 'toggleCat', k)).join('');
+  document.getElementById('cat-chips').innerHTML = Object.entries(DEPT_LABELS).map(([k,l])=>chipHtml(tr(l), k in CART, 'toggleCat', k)).join('');
   const ks = Object.keys(CART);
   document.getElementById('cart-rows').innerHTML = ks.map(k=>
-    `<div class="cart-row"><span>${DEPT_LABELS[k]}</span><div class="money"><i>$</i><input type="number" inputmode="numeric" id="cart_${k}" min="0" step="50" placeholder="0" value="${CART[k]}" oninput="cartInput('${k}',this.value)"></div></div>`).join('');
+    `<div class="cart-row"><span>${tr(DEPT_LABELS[k])}</span><div class="money"><i>$</i><input type="number" inputmode="numeric" id="cart_${k}" min="0" step="50" placeholder="0" value="${CART[k]}" oninput="cartInput('${k}',this.value)"></div></div>`).join('');
 }
 function toggleCat(k){
   if(k in CART){ if(Object.keys(CART).length>1) delete CART[k]; } else { CART[k]=''; }
@@ -1210,14 +1313,14 @@ function getSale(){
 
 // ── Step 2: customer ─────────────────────────────────────────────────────────
 function renderFicoChips(active){
-  document.getElementById('fico-chips').innerHTML = FICO_RANGES.map(r=>chipHtml(r[0], active===r[1], 'pickFico', r[1])).join('');
+  document.getElementById('fico-chips').innerHTML = FICO_RANGES.map(r=>chipHtml(tr(r[0]), active===r[1], 'pickFico', r[1])).join('');
 }
 function ficoRangeOf(v){ let a=null; FICO_RANGES.forEach(r=>{ if(v>=r[1]) a=r[1]; }); return a; }
 function pickFico(v){
   document.getElementById('ficoNum').value=v;
   document.getElementById('fico').value=v;
   renderFicoChips(v);
-  document.getElementById('fico-note').textContent='Using '+v+' — the low end of the range. Type the exact score for a sharper answer.';
+  document.getElementById('fico-note').textContent=L('Using '+v+' — the low end of the range. Type the exact score for a sharper answer.','Usando '+v+' — el extremo bajo del rango. Escribe el puntaje exacto para más precisión.');
   live();
 }
 function ficoTyped(){
@@ -1229,7 +1332,7 @@ function ficoTyped(){
 }
 function renderScoreChips(){
   const cur=document.getElementById('scoreOverride').value;
-  document.getElementById('score-chips').innerHTML = SCORE_QUICK.map(r=>chipHtml(r[0], cur===r[1], 'pickScore', r[1])).join('');
+  document.getElementById('score-chips').innerHTML = SCORE_QUICK.map(r=>chipHtml(tr(r[0]), cur===r[1], 'pickScore', r[1])).join('');
 }
 function pickScore(v){ document.getElementById('scoreOverride').value=v; renderScoreChips(); live(); }
 function setCust(v){
@@ -1244,16 +1347,16 @@ function setCust(v){
 // ── Step 3: down payment ─────────────────────────────────────────────────────
 function renderDpChips(){
   const cur=document.getElementById('dpman').value;
-  document.getElementById('dp-chips').innerHTML = DP_QUICK.map(r=>chipHtml(r[0], String(cur)===String(r[1]), 'pickDP', r[1])).join('');
+  document.getElementById('dp-chips').innerHTML = DP_QUICK.map(r=>chipHtml(tr(r[0]), String(cur)===String(r[1]), 'pickDP', r[1])).join('');
 }
 function pickDP(v){ document.getElementById('dpman').value=v; renderDpChips(); hDP(parseFloat(v)||0); live(); }
 function manDP(){ renderDpChips(); hDP(parseFloat(document.getElementById('dpman').value)||0); live(); }
 function hDP(v){
   const sale=getSale(), el=document.getElementById('dph');
   const hasIphone=getDeptItems().some(it=>it.product==='iphone');
-  if(hasIphone){ el.style.color='var(--red)'; el.textContent='⚠ iPhone in cart: 25% minimum required on that portion'; return; }
+  if(hasIphone){ el.style.color='var(--red)'; el.textContent=L('⚠ iPhone in cart: 25% minimum required on that portion','⚠ iPhone en el carrito: se requiere 25% mínimo de enganche en esa parte'); return; }
   el.style.color='var(--steel)';
-  el.textContent=(v>0&&sale>0)?(Math.round(v/sale*100)+'% of the total with tax'):'';
+  el.textContent=(v>0&&sale>0)?(Math.round(v/sale*100)+L('% of the total with tax','% del total con impuesto')):'';
 }
 
 // ── Term + toggles (More details) ────────────────────────────────────────────
@@ -1284,7 +1387,7 @@ function resetAll(){
   document.getElementById('emptype').value='employed'; setTerm0(18);
   ['x_delinq10','x_unpaid','x_cosigner','x_late30'].forEach(i=>{document.getElementById(i).checked=false;});
   tog0('ver',true); tog0('def',false); tog0('derog',false); setCust0('new');
-  window.__last=null; window.__thin=null; reqSeq++;
+  window.__last=null; window.__thin=null; window.__renderArgs=null; reqSeq++;
   idleResult();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1294,11 +1397,11 @@ function setTerm0(v){ document.getElementById('term').value=v; document.querySel
 function tog0(k,v){ const o=live; live=function(){}; tog(k,v); live=o; }
 function setCust0(v){ const o=live; live=function(){}; setCust(v); live=o; }
 function idleResult(){ const b=document.getElementById('bar'); if(b) b.classList.remove('show');
-  document.getElementById('rcol').innerHTML='<div class="panel"><div class="idle"><div class="idle-ico">🏠</div><div class="idle-t">Fill in the 3 steps</div><div class="idle-s">Purchase and FICO are enough. The result shows up here on its own.</div></div></div>';
+  document.getElementById('rcol').innerHTML='<div class="panel"><div class="idle"><div class="idle-ico">🏠</div><div class="idle-t">'+tr('Fill in the 3 steps')+'</div><div class="idle-s">'+tr('Purchase and FICO are enough. The result shows up here on its own.')+'</div></div></div>';
 }
 
 // ── INITIALIZE ───────────────────────────────────────────────────────────────
-renderCats(); renderFicoChips(null); renderScoreChips(); renderDpChips();
+renderCats(); renderFicoChips(null); renderScoreChips(); renderDpChips(); applyStatic(); if(LANG==='es') idleResult();
 </script>
 </body>
 </html>
