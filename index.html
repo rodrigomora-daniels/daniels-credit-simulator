@@ -299,6 +299,12 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
 .mid-in{width:100%;height:46px;margin-top:10px;padding:0 12px;border:2px solid var(--border);border-radius:10px;font-family:'Sora',sans-serif;font-size:16px;font-weight:600;color:var(--navy)}.mid-in:focus{border-color:var(--steel);outline:none}
 .alts{margin-top:14px;padding-top:10px;border-top:1px dashed rgba(0,0,0,.15);font-size:13px;color:var(--navy)}.alts b{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);margin-bottom:4px}.alts div{margin:3px 0}.alts span{font-size:10px;background:rgba(0,0,0,.07);border-radius:99px;padding:1px 7px;margin-left:4px}
 @media(min-width:841px){#rcol{position:sticky;top:72px}}
+
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield;appearance:textfield}
+.chip-b{min-height:48px;padding:0 16px;font-size:14px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}.tg{height:52px;font-size:14px;touch-action:manipulation}.term-chip{height:42px;padding:0 14px;font-size:13px}.money input{height:54px}.mid-in{height:54px}.big-in{height:64px}
+.rst{font-size:13px;padding:14px}details.more>summary{padding:16px 0;font-size:14px}details.how>summary{padding:18px 16px;font-size:14px}
+#bar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:300;background:var(--navy);color:#fff;padding:12px 16px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,.25);align-items:center;justify-content:space-between;gap:12px;font-size:16px;font-weight:700;cursor:pointer}#bar small{font-size:11px;font-weight:600;opacity:.7;display:block}#bar .go{background:#fff;color:var(--navy);border-radius:20px;padding:10px 16px;font-size:13px}
+@media(max-width:840px){#bar.show{display:flex}body{padding-bottom:84px}}
 </style>
 </head>
 <body>
@@ -334,14 +340,14 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
         <button class="tg" id="ce" onclick="setCust('existing')">Has an account</button>
       </div>
       <label class="mini">FICO score <span class="hint">type it or tap a range</span></label>
-      <input type="number" id="ficoNum" class="big-in" min="300" max="850" placeholder="e.g. 620" oninput="ficoTyped()">
+      <input type="number" inputmode="numeric" pattern="[0-9]*" id="ficoNum" class="big-in" min="300" max="850" placeholder="e.g. 620" oninput="ficoTyped()">
       <input type="hidden" id="fico" value="0">
       <div class="chips" id="fico-chips"></div>
       <div class="dp-h" id="fico-note"></div>
 
       <div id="existing-fields" style="display:none">
         <label class="mini">Credit line available on the account <span class="hint">from the customer screen</span></label>
-        <input type="number" id="creditLine" class="mid-in" value="" placeholder="$0 if none" min="0" step="100" oninput="live()">
+        <input type="number" inputmode="numeric" id="creditLine" class="mid-in" value="" placeholder="$0 if none" min="0" step="100" oninput="live()">
         <label class="mini">Account score <span class="hint">only if you can see it</span></label>
         <div class="chips" id="score-chips"></div>
         <input type="hidden" id="scoreOverride" value="">
@@ -349,7 +355,7 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
 
       <div class="step"><span class="stn">3</span> Down payment <span class="hint">optional — leave empty to see what is needed</span></div>
       <div class="chips" id="dp-chips"></div>
-      <input type="number" id="dpman" class="mid-in" placeholder="Custom amount" min="0" step="25" oninput="manDP()">
+      <input type="number" inputmode="numeric" id="dpman" class="mid-in" placeholder="Custom amount" min="0" step="25" oninput="manDP()">
       <input type="hidden" id="dpsl" value="0">
       <div class="dp-h" id="dph"></div>
 
@@ -358,7 +364,7 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
       <div id="new-fields">
         <div class="f">
           <label>Open trade lines on credit report (leave blank unless you know it)</label>
-          <input type="number" id="openAccts" value="" placeholder="Auto — estimated from FICO" min="0" max="30" step="1" oninput="live()">
+          <input type="number" inputmode="numeric" id="openAccts" value="" placeholder="Auto — estimated from FICO" min="0" max="30" step="1" oninput="live()">
           <div class="dp-h">Infinity score: A needs FICO 625+ and 3+ open &middot; B needs 600+ and 2+ &middot; C needs 531+ and 2+</div>
         </div>
         <div class="f">
@@ -400,7 +406,7 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
 
       <div class="f">
         <label>Tax Rate (%)</label>
-        <input type="number" id="tax" value="8.0" min="0" max="15" step="0.25" oninput="live()">
+        <input type="number" inputmode="decimal" id="tax" value="8.0" min="0" max="15" step="0.25" oninput="live()">
       </div>
 
       <div class="f">
@@ -451,6 +457,7 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
     </div>
   </div>
 
+  <div id="bar" onclick="document.getElementById('rcol').scrollIntoView({behavior:'smooth'})"><div><small id="bar-l">Result</small><span id="bar-t"></span></div><span class="go">See result ↓</span></div>
   <div class="foot">Daniels Home Center · Credit Pre-Screen v4.2 · Mirrors Infinity X090 as configured Nov 5, 2026 · Estimate only — not an approval · Internal use only</div>
 </div>
 
@@ -1148,6 +1155,11 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
     <div class="db ${cls} ani"><div class="db-lbl">Pre-Screen Result</div><div class="db-main">${head}</div>${big}${window.__thin?`<div class="hero-note warn">If the credit file is thin (under 3 open accounts): ${window.__thin.offer?('score '+window.__thin.score+' → '+window.__thin.offer.rule+', '+usd(window.__thin.offer.dp)+' down, '+window.__thin.offer.term+' mo, ~'+usd(window.__thin.offer.pmt)+'/mo.'):('score '+window.__thin.score+' → no in-house offer.')}</div>`:''}<div class="hero-fine">Estimate only — it does not pull credit. Final approval happens in Infinity.</div></div>
     ${grH}${sfH}${scH}
     <details class="how"><summary>See how this was calculated</summary>${optsH}${mH}${ofH}${svH}${spH}${ecH}${wfH}</details>`;
+  (function(){const b=document.getElementById('bar');if(!b)return;
+    if(P&&(cls==='approved'||cls==='adjust')){document.getElementById('bar-l').textContent=window.__dpBlank?'Down needed':'Down today';document.getElementById('bar-t').textContent=usd(P.dp)+' · '+usd(P.pmt)+'/mo · '+P.term+' mo';b.classList.add('show');}
+    else if(cls==='split'&&split){document.getElementById('bar-l').textContent='Result';document.getElementById('bar-t').textContent='Part in-house + partner';b.classList.add('show');}
+    else {document.getElementById('bar-l').textContent='Result';document.getElementById('bar-t').textContent=head;b.classList.add('show');}
+  })();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1171,7 +1183,7 @@ function renderCats(){
   document.getElementById('cat-chips').innerHTML = Object.entries(DEPT_LABELS).map(([k,l])=>chipHtml(l, k in CART, 'toggleCat', k)).join('');
   const ks = Object.keys(CART);
   document.getElementById('cart-rows').innerHTML = ks.map(k=>
-    `<div class="cart-row"><span>${DEPT_LABELS[k]}</span><div class="money"><i>$</i><input type="number" id="cart_${k}" min="0" step="50" placeholder="0" value="${CART[k]}" oninput="cartInput('${k}',this.value)"></div></div>`).join('');
+    `<div class="cart-row"><span>${DEPT_LABELS[k]}</span><div class="money"><i>$</i><input type="number" inputmode="numeric" id="cart_${k}" min="0" step="50" placeholder="0" value="${CART[k]}" oninput="cartInput('${k}',this.value)"></div></div>`).join('');
 }
 function toggleCat(k){
   if(k in CART){ if(Object.keys(CART).length>1) delete CART[k]; } else { CART[k]=''; }
@@ -1281,7 +1293,7 @@ function syncCart0(){ document.getElementById('purchase').value=0; document.getE
 function setTerm0(v){ document.getElementById('term').value=v; document.querySelectorAll('.term-chip').forEach(c=>c.classList.toggle('active',c.textContent.trim()===v+' mo')); }
 function tog0(k,v){ const o=live; live=function(){}; tog(k,v); live=o; }
 function setCust0(v){ const o=live; live=function(){}; setCust(v); live=o; }
-function idleResult(){
+function idleResult(){ const b=document.getElementById('bar'); if(b) b.classList.remove('show');
   document.getElementById('rcol').innerHTML='<div class="panel"><div class="idle"><div class="idle-ico">🏠</div><div class="idle-t">Fill in the 3 steps</div><div class="idle-s">Purchase and FICO are enough. The result shows up here on its own.</div></div></div>';
 }
 
