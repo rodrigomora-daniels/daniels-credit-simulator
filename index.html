@@ -286,6 +286,11 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
 
 @media(max-width:840px){.wrap{grid-template-columns:1fr}.mg{grid-template-columns:1fr 1fr}.og{grid-template-columns:1fr}}
 .ck{display:flex;gap:8px;align-items:flex-start;font-size:12px;font-weight:500;color:var(--navy);margin:6px 0;cursor:pointer}.ck input{margin-top:2px}.ofr{width:100%;border-collapse:collapse;font-size:12px}.ofr th,.ofr td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.ofr th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--sub)}.ofr .ok{color:#1b7a3d;font-weight:700}.ofr .no{color:#8a1f1f;font-weight:700}.ofr .nat{font-size:10px;background:#e8e4f8;color:#4b3b8a;border-radius:99px;padding:1px 7px;margin-left:4px}.ofr .best{background:#fff7d6}.unk{font-size:11px;color:var(--sub);margin-top:8px}.unk li{margin:3px 0}
+details.more{margin-top:14px;border:1.5px solid var(--border);border-radius:9px;padding:0 12px;background:var(--off)}details.more>summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--navy);padding:11px 0;list-style:none}details.more>summary::before{content:"+ ";font-weight:800}details.more[open]>summary::before{content:"\2212 "}details.more[open]{padding-bottom:10px}
+#fv{display:none}.big-in{width:100%;height:54px;font-size:26px;font-weight:700;text-align:center;border:2px solid var(--border);border-radius:12px;background:#fff;color:var(--navy);margin:2px 0 10px;font-family:'Sora',sans-serif}.big-in:focus{border-color:var(--steel);outline:none}
+.hero-nums{display:flex;gap:10px;margin:16px 0 6px;flex-wrap:wrap}.hero-nums>div{flex:1 1 90px;background:rgba(255,255,255,.7);border-radius:12px;padding:12px 10px;text-align:center}.hero-nums small{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sub)}.hero-nums b{display:block;font-size:28px;color:var(--navy);margin-top:2px;font-variant-numeric:tabular-nums}
+.hero-note{margin-top:10px;font-size:14px;font-weight:600;color:var(--navy)}.hero-note.warn{color:#8a5a00}.hero-note.ok{color:#1b7a3d}.hero-fine{margin-top:12px;font-size:11px;color:var(--sub)}
+details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}details.how>summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--navy);padding:14px 16px;list-style:none}details.how>summary::before{content:"+ ";font-weight:800}details.how[open]>summary::before{content:"\2212 "}details.how[open]>*:not(summary){margin:0 12px 12px}
 </style>
 </head>
 <body>
@@ -308,10 +313,22 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
     <div class="ph"><div class="ph-ico">📋</div><h2>Customer &amp; Deal</h2></div>
     <div class="pb">
 
-      <div class="sec">Customer Profile</div>
+      <div class="sec">Purchase</div>
+
+      <div class="f">
+        <label>Merchandise — by Department <span class="req">*</span></label>
+        <div id="dept-rows"></div>
+        <button type="button" class="dept-add-btn" onclick="addDeptRow()">+ Add another department</button>
+        <div class="dept-total-line">Total purchase: <strong id="dept-total-disp">$1,800</strong></div>
+        <input type="hidden" id="purchase" value="1800">
+        <input type="hidden" id="product" value="furniture">
+      </div>
+
+      <div class="sec">Customer</div>
 
       <div class="f">
         <label>FICO Score <span class="req">*</span></label>
+        <input type="number" id="ficoNum" class="big-in" min="300" max="850" placeholder="Type the score, e.g. 620" oninput="ficoTyped()">
         <div class="sl-wrap">
           <span class="sl-num" id="fv">640</span>
           <input type="range" id="fico" min="400" max="850" value="640" step="1" oninput="sf()">
@@ -324,21 +341,6 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
         <div class="tg-row">
           <button class="tg yes" id="cn" onclick="setCust('new')">New customer</button>
           <button class="tg" id="ce" onclick="setCust('existing')">Existing / reopening</button>
-        </div>
-      </div>
-
-      <div id="new-fields">
-        <div class="f">
-          <label>Open trade lines on credit report</label>
-          <input type="number" id="openAccts" value="4" min="0" max="30" step="1">
-          <div class="dp-h">Infinity score: A needs FICO 625+ and 3+ open &middot; B needs 600+ and 2+ &middot; C needs 531+ and 2+</div>
-        </div>
-        <div class="f">
-          <label>Judgment or foreclosure (last 12 mo), or 4+ past-due accounts?</label>
-          <div class="tg-row">
-            <button class="tg" id="gy" onclick="tog('derog',true)">&#9888; Yes</button>
-            <button class="tg yes" id="gn" onclick="tog('derog',false)">&#10003; No</button>
-          </div>
         </div>
       </div>
 
@@ -355,6 +357,36 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
           <label>Available credit line on the account ($)</label>
           <input type="number" id="creditLine" value="0" min="0" step="100">
           <div class="dp-h">From the customer screen in Infinity. Needed to check the native Credit Line rule (C992).</div>
+        </div>
+      </div>
+
+      <div class="f">
+        <label>Down Payment Customer Has ($)</label>
+        <div class="sl-wrap">
+          <span class="sl-num" id="dpv">$300</span>
+          <input type="range" id="dpsl" min="0" max="3000" value="300" step="25" oninput="syncDP()">
+          <div class="sl-labs"><span>$0</span><span>$500</span><span>$1K</span><span>$2K</span><span>$3K+</span></div>
+        </div>
+        <div class="dp-h" id="dph">Adjust slider or enter below</div>
+        <input type="number" id="dpman" placeholder="Type exact amount" min="0" step="25" style="margin-top:7px" oninput="manDP()">
+      </div>
+
+      <button class="cta" onclick="calculate()">⚡ Check options</button>
+      <div class="dp-h" style="text-align:center;margin-top:8px">Assumes a normal credit file (3+ open accounts, no judgments). Open <strong>More details</strong> only if you know otherwise.</div>
+      <details class="more"><summary>More details (optional)</summary>
+
+      <div id="new-fields">
+        <div class="f">
+          <label>Open trade lines on credit report</label>
+          <input type="number" id="openAccts" value="4" min="0" max="30" step="1">
+          <div class="dp-h">Infinity score: A needs FICO 625+ and 3+ open &middot; B needs 600+ and 2+ &middot; C needs 531+ and 2+</div>
+        </div>
+        <div class="f">
+          <label>Judgment or foreclosure (last 12 mo), or 4+ past-due accounts?</label>
+          <div class="tg-row">
+            <button class="tg" id="gy" onclick="tog('derog',true)">&#9888; Yes</button>
+            <button class="tg yes" id="gn" onclick="tog('derog',false)">&#10003; No</button>
+          </div>
         </div>
       </div>
 
@@ -386,31 +418,9 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
         </div>
       </div>
 
-      <div class="sec">Deal Details</div>
-
-      <div class="f">
-        <label>Merchandise — by Department <span class="req">*</span></label>
-        <div id="dept-rows"></div>
-        <button type="button" class="dept-add-btn" onclick="addDeptRow()">+ Add another department</button>
-        <div class="dept-total-line">Total purchase: <strong id="dept-total-disp">$1,800</strong></div>
-        <input type="hidden" id="purchase" value="1800">
-        <input type="hidden" id="product" value="furniture">
-      </div>
-
       <div class="f">
         <label>Tax Rate (%)</label>
         <input type="number" id="tax" value="8.0" min="0" max="15" step="0.25" oninput="updDP()">
-      </div>
-
-      <div class="f">
-        <label>Down Payment Customer Has ($)</label>
-        <div class="sl-wrap">
-          <span class="sl-num" id="dpv">$300</span>
-          <input type="range" id="dpsl" min="0" max="3000" value="300" step="25" oninput="syncDP()">
-          <div class="sl-labs"><span>$0</span><span>$500</span><span>$1K</span><span>$2K</span><span>$3K+</span></div>
-        </div>
-        <div class="dp-h" id="dph">Adjust slider or enter below</div>
-        <input type="number" id="dpman" placeholder="Type exact amount" min="0" step="25" style="margin-top:7px" oninput="manDP()">
       </div>
 
       <div class="f">
@@ -457,7 +467,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
         <label class="ck"><input type="checkbox" id="x_late30"> 30-day late on credit report in last 12 months</label>
       </div>
 
-      <button class="cta" onclick="calculate()">⚡ Run Pre-Screen</button>
+      </details>
       <button class="rst" onclick="resetAll()">Reset form</button>
     </div>
   </div>
@@ -504,7 +514,7 @@ async function calculate() {
   // stops) now runs server-side in a Supabase Edge Function. The browser
   // never downloads the decision rules. This function only collects the
   // form inputs, posts them, and renders whatever comes back.
-  const fico       = parseInt(document.getElementById('fico').value);
+  const fico       = parseInt(document.getElementById('ficoNum').value) || parseInt(document.getElementById('fico').value);
   const items      = getDeptItems(); // [{product, amount}, ...]
   const purchase   = items.reduce((s,it)=>s+it.amount, 0);
   const tax        = parseFloat(document.getElementById('tax').value)||0;
@@ -1129,16 +1139,34 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
   // waterfall
   const wfH=`<div class="wf ani5"><div class="wf-hdr"><span>📊</span><h3>Prequalification Breakdown — Evaluation Path</h3></div>${steps.map((s,i)=>`<div class="ws"><div class="sb ${s.s}">${ico[s.s]||'·'}</div><div style="flex:1;min-width:0"><div class="wn">Step ${i+1} · ${s.n}</div><div class="wd">${s.d}</div>${s.note?`<div class="wnt">${s.note}</div>`:''}</div></div>`).join('')}</div>`;
 
+  const P=R.policyOffer, usd=n=>'$'+Math.round(n||0).toLocaleString();
+  const head={approved:'Looks good — likely approved in-house',adjust:'Likely approved in-house',split:'Part in-house, part with a partner',external:'Likely a partner program',declined:'Not a fit for financing right now'}[cls]||decision;
+  const ep=(parseInt(document.getElementById('ficoNum').value)||parseInt(document.getElementById('fico').value))<600?'SNAP / Koalafi':'Synchrony / WF';
+  let big='';
+  if(P&&(cls==='approved'||cls==='adjust')){
+    big=`<div class="hero-nums"><div><small>Down today</small><b>${usd(P.dp)}</b></div><div><small>Monthly</small><b>${usd(P.pmt)}</b></div><div><small>Term</small><b>${P.term} mo</b></div></div>`+
+        (dpShort>0?`<div class="hero-note warn">Customer needs <strong>${usd(dpShort)} more</strong> down to get there.</div>`:`<div class="hero-note ok">The down payment on hand covers it.</div>`);
+  } else if(cls==='split'&&split){
+    big=`<div class="hero-nums"><div><small>In-house</small><b>${usd(split.danielsAmt)}</b></div><div><small>${split.partner}</small><b>${usd(split.extAmt)}</b></div></div>`;
+  } else if(cls==='external'||cls==='declined'){
+    big=`<div class="hero-note">${cls==='external'?'Suggested next step: '+ep+'.':'Nothing in-house fits today. Offer '+ep+' or a smaller purchase.'}</div>`;
+  }
   document.getElementById('rcol').innerHTML=`
-    <div class="db ${cls} ani"><div class="db-lbl">Pre-Screen Result</div><div class="db-main">${decision}</div><div class="db-sub">${sub[cls]||''}</div>${routing?chips[routing]||'':''}</div>
-    ${optsH}${grH}${mH}${ofH}${sfH}${scH}${svH}${spH}${ecH}${wfH}`;
+    <div class="db ${cls} ani"><div class="db-lbl">Pre-Screen Result</div><div class="db-main">${head}</div>${big}<div class="hero-fine">Estimate only — it does not pull credit. Final approval happens in Infinity.</div></div>
+    ${grH}${sfH}${scH}
+    <details class="how"><summary>See how this was calculated</summary>${optsH}${mH}${ofH}${svH}${spH}${ecH}${wfH}</details>`;
 }
 
 // ════════════════════════════════════════════════════════════
 // UI HELPERS
 // ════════════════════════════════════════════════════════════
+function ficoTyped(){
+  const v=parseInt(document.getElementById('ficoNum').value);
+  if(v>=300&&v<=850){const sl=document.getElementById('fico');sl.value=Math.max(400,v);sf();}
+}
 function sf(){
   const v=parseInt(document.getElementById('fico').value);
+  const fn=document.getElementById('ficoNum'); if(fn && document.activeElement!==fn) fn.value=v;
   const el=document.getElementById('fv');
   el.textContent=v;
   el.className='sl-num '+(v<550?'danger':v<600?'warn':v<650?'':v>=650?'good':'');
