@@ -415,10 +415,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         </div>
       </div>
 
-      <div class="f">
-        <label>Tax Rate (%)</label>
-        <input type="number" inputmode="decimal" id="tax" value="8.0" min="0" max="15" step="0.25" oninput="live()">
-      </div>
+      <input type="hidden" id="tax" value="8.0">
 
       <div class="f">
         <label>Requested Term (months)</label>
@@ -1262,7 +1259,7 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
   }
   const thinH=window.__thin?`<div class="hero-note warn">${L('If the credit file is thin (under 3 open accounts): ','Si el historial es delgado (menos de 3 cuentas abiertas): ')}${window.__thin.offer?(L('score ','score ')+window.__thin.score+' → '+window.__thin.offer.rule+', '+usd(window.__thin.offer.dp)+' '+dwn+', '+window.__thin.offer.term+' '+mo+', ~'+usd(window.__thin.offer.pmt)+pm+'.'):('score '+window.__thin.score+' → '+L('no in-house offer.','sin oferta in-house.'))}</div>`:'';
   document.getElementById('rcol').innerHTML=`
-    <div class="db ${cls} ani"><div class="db-lbl">${L('Pre-Screen Result','Resultado de la pre-evaluación')}</div><div class="db-main">${head}</div>${big}${thinH}<div class="hero-fine">${L('Estimate only — it does not pull credit. Final approval happens in Infinity.','Solo un estimado — no consulta el crédito. La aprobación final se hace en Infinity.')}</div></div>
+    <div class="db ${cls} ani"><div class="db-lbl">${L('Pre-Screen Result','Resultado de la pre-evaluación')}</div><div class="db-main">${head}</div>${big}${thinH}<div class="hero-fine">${L('Estimate only — it does not pull credit and assumes about 8% sales tax. Final approval happens in Infinity.','Solo un estimado — no consulta el crédito y supone ~8% de impuesto. La aprobación final se hace en Infinity.')}</div></div>
     ${grH}${sfH}${scH}
     <details class="how"><summary>${L('See how this was calculated','Ver cómo se calculó (detalle técnico, en inglés)')}</summary>${optsH}${mH}${ofH}${svH}${spH}${ecH}${wfH}</details>`;
   (function(){const b=document.getElementById('bar');if(!b)return;
