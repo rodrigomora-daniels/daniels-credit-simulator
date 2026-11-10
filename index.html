@@ -346,7 +346,32 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <div class="chips" id="fico-chips"></div>
       <div class="dp-h" id="fico-note"></div>
 
+      <div id="new-fields2">
+        <label class="mini">Credit history <span class="hint">optional — only if the customer mentions it</span></label>
+        <div class="chips" id="hist-chips"></div>
+        <label class="mini">Judgment, foreclosure or several accounts past due?</label>
+        <div class="tg-row">
+          <button class="tg" id="gy" onclick="tog('derog',true)">⚠ Yes</button>
+          <button class="tg yes" id="gn" onclick="tog('derog',false)">✓ No</button>
+        </div>
+      </div>
+
       <div id="existing-fields" style="display:none">
+        <label class="mini">Time as a Daniels customer</label>
+        <div class="chips" id="tenure-chips"></div>
+        <label class="mini">Account standing</label>
+        <div class="chips">
+          <button type="button" class="chip-b on" id="st-good" onclick="setStanding(false)">In good standing</button>
+          <button type="button" class="chip-b" id="st-bad" onclick="setStanding(true)">Has an issue</button>
+        </div>
+        <div id="issues-box" style="display:none">
+          <label class="ck"><input type="checkbox" id="x_delinq10" onchange="live()"> More than 10 days late at Daniels right now</label>
+          <label class="ck"><input type="checkbox" id="x_unpaid" onchange="live()"> Returned check, NSF fee or unpaid late charge</label>
+          <div class="tg-row">
+            <button class="tg" id="dy" onclick="tog('def',true)">Prior charge-off</button>
+            <button class="tg yes" id="dn" onclick="tog('def',false)">No charge-off</button>
+          </div>
+        </div>
         <label class="mini">Credit line available on the account <span class="hint">from the customer screen</span></label>
         <input type="number" inputmode="numeric" id="creditLine" class="mid-in" value="" placeholder="$0 if none" min="0" step="100" oninput="live()">
         <label class="mini">Account score <span class="hint">only if you can see it</span></label>
@@ -365,27 +390,12 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <div id="new-fields">
         <div class="f">
           <label>Open trade lines on credit report (leave blank unless you know it)</label>
-          <input type="number" inputmode="numeric" id="openAccts" value="" placeholder="Auto — estimated from FICO" min="0" max="30" step="1" oninput="live()">
+          <input type="number" inputmode="numeric" id="openAccts" value="" placeholder="Auto — estimated from FICO" min="0" max="30" step="1" oninput="renderHist();live()">
           <div class="dp-h">Infinity score: A needs FICO 625+ and 3+ open &middot; B needs 600+ and 2+ &middot; C needs 531+ and 2+</div>
-        </div>
-        <div class="f">
-          <label>Judgment or foreclosure (last 12 mo), or 4+ past-due accounts?</label>
-          <div class="tg-row">
-            <button class="tg" id="gy" onclick="tog('derog',true)">&#9888; Yes</button>
-            <button class="tg yes" id="gn" onclick="tog('derog',false)">&#10003; No</button>
-          </div>
         </div>
       </div>
 
-      <div class="f">
-        <label>Loyalty / Tenure at Daniels</label>
-        <select id="tenure" onchange="live()">
-          <option value="0">New — 0 to 5 months</option>
-          <option value="9">6 to 11 months</option>
-          <option value="18" selected>12 to 23 months</option>
-          <option value="30">24 months or more</option>
-        </select>
-      </div>
+      <input type="hidden" id="tenure" value="18">
 
       <div class="f">
         <label>Employment Type</label>
@@ -427,17 +437,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       </div>
 
       <div class="f">
-        <label>Prior Daniels charge-off / default?</label>
-        <div class="tg-row">
-          <button class="tg" id="dy" onclick="tog('def',true)">✓ Yes — Prior default</button>
-          <button class="tg yes" id="dn" onclick="tog('def',false)">✓ No — Clean</button>
-        </div>
-      </div>
-
-      <div class="f">
         <label>Check any that apply (Infinity exclusions)</label>
-        <label class="ck"><input type="checkbox" id="x_delinq10" onchange="live()"> Currently more than 10 days delinquent at Daniels</label>
-        <label class="ck"><input type="checkbox" id="x_unpaid" onchange="live()"> Unpaid returned check, NSF fee or late charge</label>
         <label class="ck"><input type="checkbox" id="x_cosigner" onchange="live()"> Customer needs a co-signer</label>
         <label class="ck"><input type="checkbox" id="x_late30" onchange="live()"> 30-day late on credit report in last 12 months</label>
       </div>
@@ -500,6 +500,13 @@ const ES={
 'Customer needs a co-signer':'El cliente necesita un co-signer (codeudor)',
 '30-day late on credit report in last 12 months':'Atraso de 30 días en el reporte en los últimos 12 meses',
 'See result ↓':'Ver resultado ↓',
+'Credit history':'Historial de crédito','optional — only if the customer mentions it':'opcional — solo si el cliente lo menciona',
+'Judgment, foreclosure or several accounts past due?':'¿Juicio, ejecución hipotecaria o varias cuentas vencidas?',
+'Time as a Daniels customer':'Tiempo como cliente de Daniels','Account standing':'Estado de la cuenta','In good standing':'Al corriente','Has an issue':'Tiene un problema',
+'More than 10 days late at Daniels right now':'Más de 10 días de atraso en Daniels ahora mismo','Returned check, NSF fee or unpaid late charge':'Cheque devuelto, cargo NSF o recargo por atraso sin pagar',
+'Prior charge-off':'Cancelación previa por impago','No charge-off':'Sin cancelación previa',
+'New (0–5 mo)':'Nuevo (0–5 meses)','6–11 mo':'6–11 meses','1–2 years':'1–2 años','2+ years':'Más de 2 años',
+'Has credit cards or loans':'Tiene tarjetas o préstamos','Little or no credit':'Poco o nada de crédito',
 'Daniels Home Center · Credit Pre-Screen v4.2 · Mirrors Infinity X090 as configured Nov 5, 2026 · Estimate only — not an approval · Internal use only':'Daniels Home Center · Pre-evaluación de crédito v4.2 · Refleja Infinity X090 según su configuración del 5 nov 2026 · Solo estimado — no es una aprobación · Uso interno',
 // dynamic labels
 'Furniture':'Muebles','Mattress':'Colchón','Appliances':'Electrodomésticos','Electronics / TV':'Electrónicos / TV','Seasonal (A/C, heater)':'De temporada (A/C, calentador)','iPhone / Apple':'iPhone / Apple','Accessories':'Accesorios',
@@ -523,7 +530,7 @@ function applyStatic(){
 }
 function setLang(l){
   LANG=l; try{localStorage.setItem('dhc_lang',l);}catch(e){}
-  applyStatic(); renderCats(); renderFicoChips(parseInt(document.getElementById('fico').value)?ficoRangeOf(parseInt(document.getElementById('fico').value)):null); renderScoreChips(); renderDpChips();
+  applyStatic(); renderCats(); renderFicoChips(parseInt(document.getElementById('fico').value)?ficoRangeOf(parseInt(document.getElementById('fico').value)):null); renderScoreChips(); renderDpChips(); renderTenure(); renderHist();
   hDP(parseFloat(document.getElementById('dpman').value)||0);
   if(window.__renderArgs) render.apply(null,window.__renderArgs); else idleResult();
 }
@@ -613,12 +620,12 @@ async function calculate() {
   const product = items.slice().sort((a,b)=>b.amount-a.amount)[0].product;
 
   const payload = {
-    fico, purchase, tax, tenure, product, items,
-    dpInput, termReq, emptype, verified, priorDef,
+    fico, purchase, tax, tenure: custType==='new'?0:tenure, product, items,
+    dpInput, termReq, emptype, verified, priorDef: custType==='existing'&&priorDef,
     custType, openAccts: isNaN(openAccts)?undefined:openAccts,
     judgments: derog?1:0, judgBig: derog,
     scoreOverride: custType==='existing'?scoreOverride:'', creditLine: custType==='existing'?creditLine:0,
-    delinq10: ck('x_delinq10'), unpaid: ck('x_unpaid'), cosigner: ck('x_cosigner'), late30: ck('x_late30'),
+    delinq10: custType==='existing'&&ck('x_delinq10'), unpaid: custType==='existing'&&ck('x_unpaid'), cosigner: ck('x_cosigner'), late30: ck('x_late30'),
     income: 0, debts: 0
   };
 
@@ -1276,6 +1283,8 @@ const CART = { furniture:'' };            // selected categories → amount type
 const FICO_RANGES = [['Under 530',500],['530–549',530],['550–599',550],['600–639',600],['640–659',640],['660–699',660],['700+',700]];
 const DP_QUICK = [['Not sure',''],['$100',100],['$200',200],['$300',300],['$500',500],['$1,000',1000]];
 const SCORE_QUICK = [['Not sure',''],['A','A'],['B','B'],['C','C'],['D','D'],['U','U']];
+const TENURE_Q=[['New (0–5 mo)',0],['6–11 mo',9],['1–2 years',18],['2+ years',30]];
+const HIST_Q=[['Not sure',''],['Has credit cards or loans',3],['Little or no credit',1]];
 let liveTimer=null, reqSeq=0;
 
 function live(){ clearTimeout(liveTimer); liveTimer=setTimeout(calculate,350); }
@@ -1330,6 +1339,22 @@ function ficoTyped(){
   renderFicoChips((v>=300&&v<=850)?ficoRangeOf(v):null);
   live();
 }
+function renderTenure(){
+  const cur=document.getElementById('tenure').value;
+  document.getElementById('tenure-chips').innerHTML=TENURE_Q.map(r=>chipHtml(tr(r[0]),String(cur)===String(r[1]),'pickTenure',r[1])).join('');
+}
+function pickTenure(v){ document.getElementById('tenure').value=v; renderTenure(); live(); }
+function renderHist(){
+  const cur=document.getElementById('openAccts').value;
+  document.getElementById('hist-chips').innerHTML=HIST_Q.map(r=>chipHtml(tr(r[0]),String(cur)===String(r[1]),'pickHist',r[1])).join('');
+}
+function pickHist(v){ document.getElementById('openAccts').value=v; renderHist(); live(); }
+function setStanding(bad){
+  document.getElementById('st-good').classList.toggle('on',!bad); document.getElementById('st-bad').classList.toggle('on',bad);
+  document.getElementById('issues-box').style.display=bad?'':'none';
+  if(!bad){ document.getElementById('x_delinq10').checked=false; document.getElementById('x_unpaid').checked=false; tog0('def',false); }
+  live();
+}
 function renderScoreChips(){
   const cur=document.getElementById('scoreOverride').value;
   document.getElementById('score-chips').innerHTML = SCORE_QUICK.map(r=>chipHtml(tr(r[0]), cur===r[1], 'pickScore', r[1])).join('');
@@ -1340,6 +1365,7 @@ function setCust(v){
   document.getElementById('cn').className='tg '+(v==='new'?'yes':'');
   document.getElementById('ce').className='tg '+(v==='existing'?'yes':'');
   document.getElementById('new-fields').style.display=v==='new'?'':'none';
+  document.getElementById('new-fields2').style.display=v==='new'?'':'none';
   document.getElementById('existing-fields').style.display=v==='existing'?'':'none';
   live();
 }
@@ -1383,7 +1409,7 @@ function resetAll(){
   document.getElementById('ficoNum').value=''; document.getElementById('fico').value=0; renderFicoChips(null); document.getElementById('fico-note').textContent='';
   document.getElementById('dpman').value=''; renderDpChips(); hDP(0);
   document.getElementById('creditLine').value=''; document.getElementById('scoreOverride').value=''; renderScoreChips();
-  document.getElementById('openAccts').value=''; document.getElementById('tax').value=8.0; document.getElementById('tenure').value='18';
+  document.getElementById('openAccts').value=''; document.getElementById('tax').value=8.0; document.getElementById('tenure').value='18'; renderTenure(); renderHist(); document.getElementById('st-good').classList.add('on'); document.getElementById('st-bad').classList.remove('on'); document.getElementById('issues-box').style.display='none';
   document.getElementById('emptype').value='employed'; setTerm0(18);
   ['x_delinq10','x_unpaid','x_cosigner','x_late30'].forEach(i=>{document.getElementById(i).checked=false;});
   tog0('ver',true); tog0('def',false); tog0('derog',false); setCust0('new');
@@ -1401,7 +1427,7 @@ function idleResult(){ const b=document.getElementById('bar'); if(b) b.classList
 }
 
 // ── INITIALIZE ───────────────────────────────────────────────────────────────
-renderCats(); renderFicoChips(null); renderScoreChips(); renderDpChips(); applyStatic(); if(LANG==='es') idleResult();
+renderCats(); renderFicoChips(null); renderScoreChips(); renderDpChips(); renderTenure(); renderHist(); applyStatic(); if(LANG==='es') idleResult();
 </script>
 </body>
 </html>
