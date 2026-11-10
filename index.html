@@ -377,8 +377,8 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
 
       <div id="new-fields">
         <div class="f">
-          <label>Open trade lines on credit report</label>
-          <input type="number" id="openAccts" value="4" min="0" max="30" step="1">
+          <label>Open trade lines on credit report (leave blank unless you know it)</label>
+          <input type="number" id="openAccts" value="" placeholder="Auto — estimated from FICO" min="0" max="30" step="1">
           <div class="dp-h">Infinity score: A needs FICO 625+ and 3+ open &middot; B needs 600+ and 2+ &middot; C needs 531+ and 2+</div>
         </div>
         <div class="f">
@@ -525,7 +525,8 @@ async function calculate() {
   const verified   = ST.ver;
   const priorDef   = ST.def;
   const custType   = ST.cust;
-  const openAccts  = parseInt(document.getElementById('openAccts').value);
+  const openTyped  = parseInt(document.getElementById('openAccts').value);
+  const openAccts  = isNaN(openTyped) ? (fico>=625?4:3) : openTyped; // FICO is the index: 625+ normally means a deeper file
   const derog      = ST.derog && custType==='new';
   const scoreOverride = document.getElementById('scoreOverride').value;
   const creditLine = parseFloat(document.getElementById('creditLine').value)||0;
@@ -589,6 +590,22 @@ async function calculate() {
   }
 
   window.__last = result;
+  window.__thin = null;
+  if (custType==='new' && isNaN(openTyped) && result.infinityScore && result.infinityScore!=='D' && !(result.steps||[]).some(function(x){return x.n==='Hard Stops'&&x.s==='fail';})) {
+    try {
+      const r2 = await fetch('https://ecfxeebhtgkbsdeuiueb.supabase.co/functions/v1/credit-prescreen-v4', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt','apikey':'sb_publishable_oRxEOMLizp1kjlsRjWWaxg_muaaMHFt'},
+        body: JSON.stringify(Object.assign({}, payload, {openAccts:2}))
+      });
+      if (r2.ok) {
+        const t = await r2.json();
+        const a = result.policyOffer, b = t.policyOffer;
+        const same = (!a && !b) || (a && b && a.dp===b.dp && a.term===b.term);
+        if (!same) window.__thin = {offer:b, score:t.infinityScore};
+      }
+    } catch(e) { /* thin-file note is optional */ }
+  }
   render(
     result.decision, result.cls, result.steps, result.tier, result.infinityScore,
     result.dp, result.dpPct, result.term, result.pmt, result.limit, result.apr,
@@ -1152,7 +1169,7 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
     big=`<div class="hero-note">${cls==='external'?'Suggested next step: '+ep+'.':'Nothing in-house fits today. Offer '+ep+' or a smaller purchase.'}</div>`;
   }
   document.getElementById('rcol').innerHTML=`
-    <div class="db ${cls} ani"><div class="db-lbl">Pre-Screen Result</div><div class="db-main">${head}</div>${big}<div class="hero-fine">Estimate only — it does not pull credit. Final approval happens in Infinity.</div></div>
+    <div class="db ${cls} ani"><div class="db-lbl">Pre-Screen Result</div><div class="db-main">${head}</div>${big}${window.__thin?`<div class="hero-note warn">If the credit file is thin (under 3 open accounts): ${window.__thin.offer?('score '+window.__thin.score+' → '+window.__thin.offer.rule+', '+usd(window.__thin.offer.dp)+' down, '+window.__thin.offer.term+' mo, ~'+usd(window.__thin.offer.pmt)+'/mo.'):('score '+window.__thin.score+' → no in-house offer.')}</div>`:''}<div class="hero-fine">Estimate only — it does not pull credit. Final approval happens in Infinity.</div></div>
     ${grH}${sfH}${scH}
     <details class="how"><summary>See how this was calculated</summary>${optsH}${mH}${ofH}${svH}${spH}${ecH}${wfH}</details>`;
 }
@@ -1312,7 +1329,7 @@ function resetAll(){
   document.getElementById('dph').textContent='Adjust slider or enter below';document.getElementById('dph').style.color='var(--steel)';
   document.getElementById('term').value=18;document.getElementById('tv').textContent='18 mo';document.getElementById('term-manual').value='';highlightTermChip(18);
   document.getElementById('dept-rows').innerHTML='';addDeptRow('furniture',1800);document.getElementById('tenure').value='18';
-  document.getElementById('openAccts').value=4;document.getElementById('creditLine').value=0;document.getElementById('scoreOverride').value='';['x_delinq10','x_unpaid','x_cosigner','x_late30'].forEach(function(i){document.getElementById(i).checked=false;});setCust('new');
+  document.getElementById('openAccts').value='';document.getElementById('creditLine').value=0;document.getElementById('scoreOverride').value='';['x_delinq10','x_unpaid','x_cosigner','x_late30'].forEach(function(i){document.getElementById(i).checked=false;});setCust('new');
   document.getElementById('emptype').value='employed';
   tog('ver',true);tog('def',false);tog('derog',false);
   document.getElementById('rcol').innerHTML='<div class="panel"><div class="idle"><div class="idle-ico">🏠</div><div class="idle-t">Ready to evaluate</div><div class="idle-s">Enter customer details on the left and press <strong>Run Pre-Screen</strong>.</div></div></div>';
