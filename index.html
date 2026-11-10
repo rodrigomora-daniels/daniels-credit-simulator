@@ -9,7 +9,7 @@ It is an estimate, NOT an approval. It never pulls credit.
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daniels Home Center — Credit Pre-Screen Tool v4.0</title>
+<title>Daniels Credit Pre-Screen</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -288,9 +288,17 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
 .ck{display:flex;gap:8px;align-items:flex-start;font-size:12px;font-weight:500;color:var(--navy);margin:6px 0;cursor:pointer}.ck input{margin-top:2px}.ofr{width:100%;border-collapse:collapse;font-size:12px}.ofr th,.ofr td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.ofr th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--sub)}.ofr .ok{color:#1b7a3d;font-weight:700}.ofr .no{color:#8a1f1f;font-weight:700}.ofr .nat{font-size:10px;background:#e8e4f8;color:#4b3b8a;border-radius:99px;padding:1px 7px;margin-left:4px}.ofr .best{background:#fff7d6}.unk{font-size:11px;color:var(--sub);margin-top:8px}.unk li{margin:3px 0}
 details.more{margin-top:14px;border:1.5px solid var(--border);border-radius:9px;padding:0 12px;background:var(--off)}details.more>summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--navy);padding:11px 0;list-style:none}details.more>summary::before{content:"+ ";font-weight:800}details.more[open]>summary::before{content:"\2212 "}details.more[open]{padding-bottom:10px}
 #fv{display:none}.big-in{width:100%;height:54px;font-size:26px;font-weight:700;text-align:center;border:2px solid var(--border);border-radius:12px;background:#fff;color:var(--navy);margin:2px 0 10px;font-family:'Sora',sans-serif}.big-in:focus{border-color:var(--steel);outline:none}
-.hero-nums{display:flex;gap:10px;margin:16px 0 6px;flex-wrap:wrap}.hero-nums>div{flex:1 1 90px;background:rgba(255,255,255,.7);border-radius:12px;padding:12px 10px;text-align:center}.hero-nums small{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sub)}.hero-nums b{display:block;font-size:28px;color:var(--navy);margin-top:2px;font-variant-numeric:tabular-nums}
+.hero-nums{display:flex;gap:10px;margin:16px 0 6px;flex-wrap:wrap}.hero-nums>div{flex:1 1 90px;background:rgba(255,255,255,.7);border-radius:12px;padding:12px 10px;text-align:center}.hero-nums small{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sub)}.hero-nums b{display:block;white-space:nowrap;font-size:26px;color:var(--navy);margin-top:2px;font-variant-numeric:tabular-nums}
 .hero-note{margin-top:10px;font-size:14px;font-weight:600;color:var(--navy)}.hero-note.warn{color:#8a5a00}.hero-note.ok{color:#1b7a3d}.hero-fine{margin-top:12px;font-size:11px;color:var(--sub)}
 details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}details.how>summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--navy);padding:14px 16px;list-style:none}details.how>summary::before{content:"+ ";font-weight:800}details.how[open]>summary::before{content:"\2212 "}details.how[open]>*:not(summary){margin:0 12px 12px}
+
+.step{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;color:var(--navy);margin:20px 0 10px}.step:first-child{margin-top:0}.step .stn{width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex:none}.step .hint,.mini .hint{font-size:11px;font-weight:500;color:var(--sub)}
+.mini{display:block;font-size:12px;font-weight:700;color:var(--navy);margin:14px 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}.chip-b{min-height:38px;padding:0 13px;border:1.5px solid var(--border);border-radius:19px;background:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;color:var(--navy);cursor:pointer;transition:.12s}.chip-b:hover{border-color:var(--steel)}.chip-b.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.cart-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;font-size:13px;font-weight:600;color:var(--navy)}.money{position:relative;width:150px}.money i{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-style:normal;color:var(--sub);font-weight:700}.money input{width:100%;height:46px;padding:0 12px 0 26px;border:2px solid var(--border);border-radius:10px;font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:var(--navy);text-align:right}.money input:focus{border-color:var(--steel);outline:none}
+.mid-in{width:100%;height:46px;margin-top:10px;padding:0 12px;border:2px solid var(--border);border-radius:10px;font-family:'Sora',sans-serif;font-size:16px;font-weight:600;color:var(--navy)}.mid-in:focus{border-color:var(--steel);outline:none}
+.alts{margin-top:14px;padding-top:10px;border-top:1px dashed rgba(0,0,0,.15);font-size:13px;color:var(--navy)}.alts b{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);margin-bottom:4px}.alts div{margin:3px 0}.alts span{font-size:10px;background:rgba(0,0,0,.07);border-radius:99px;padding:1px 7px;margin-left:4px}
+@media(min-width:841px){#rcol{position:sticky;top:72px}}
 </style>
 </head>
 <body>
@@ -300,7 +308,7 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
     <div class="top-mark">DHC</div>
     <div>
       <div class="top-name">Daniels Home Center</div>
-      <div class="top-ver">Prequalification Simulator v4.0 — Infinity Rules</div>
+      <div class="top-ver">Quick pre-screen v4.2 — mirrors Infinity</div>
     </div>
   </div>
   <div class="top-pill">Internal Use Only</div>
@@ -310,75 +318,47 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
 
   <!-- ════════ LEFT — INPUT ════════ -->
   <div class="panel">
-    <div class="ph"><div class="ph-ico">📋</div><h2>Customer &amp; Deal</h2></div>
+    <div class="ph"><div class="ph-ico">⚡</div><h2>Quick check — 3 steps</h2></div>
     <div class="pb">
 
-      <div class="sec">Purchase</div>
+      <div class="step"><span class="stn">1</span> What are they buying?</div>
+      <div class="chips" id="cat-chips"></div>
+      <div id="cart-rows"></div>
+      <div class="dept-total-line">Total before tax: <strong id="dept-total-disp">$0</strong></div>
+      <input type="hidden" id="purchase" value="0">
+      <input type="hidden" id="product" value="furniture">
 
-      <div class="f">
-        <label>Merchandise — by Department <span class="req">*</span></label>
-        <div id="dept-rows"></div>
-        <button type="button" class="dept-add-btn" onclick="addDeptRow()">+ Add another department</button>
-        <div class="dept-total-line">Total purchase: <strong id="dept-total-disp">$1,800</strong></div>
-        <input type="hidden" id="purchase" value="1800">
-        <input type="hidden" id="product" value="furniture">
+      <div class="step"><span class="stn">2</span> Who is the customer?</div>
+      <div class="tg-row">
+        <button class="tg yes" id="cn" onclick="setCust('new')">New to Daniels</button>
+        <button class="tg" id="ce" onclick="setCust('existing')">Has an account</button>
       </div>
-
-      <div class="sec">Customer</div>
-
-      <div class="f">
-        <label>FICO Score <span class="req">*</span></label>
-        <input type="number" id="ficoNum" class="big-in" min="300" max="850" placeholder="Type the score, e.g. 620" oninput="ficoTyped()">
-        <div class="sl-wrap">
-          <span class="sl-num" id="fv">640</span>
-          <input type="range" id="fico" min="400" max="850" value="640" step="1" oninput="sf()">
-          <div class="sl-labs"><span>400</span><span>500</span><span>550</span><span>600</span><span>650</span><span>700</span><span>850</span></div>
-        </div>
-      </div>
-
-      <div class="f">
-        <label>Customer at Daniels <span class="req">*</span></label>
-        <div class="tg-row">
-          <button class="tg yes" id="cn" onclick="setCust('new')">New customer</button>
-          <button class="tg" id="ce" onclick="setCust('existing')">Existing / reopening</button>
-        </div>
-      </div>
+      <label class="mini">FICO score <span class="hint">type it or tap a range</span></label>
+      <input type="number" id="ficoNum" class="big-in" min="300" max="850" placeholder="e.g. 620" oninput="ficoTyped()">
+      <input type="hidden" id="fico" value="0">
+      <div class="chips" id="fico-chips"></div>
+      <div class="dp-h" id="fico-note"></div>
 
       <div id="existing-fields" style="display:none">
-        <div class="f">
-          <label>Infinity score on the customer's account</label>
-          <select id="scoreOverride">
-            <option value="">Not sure — show A / B / C outcomes</option>
-            <option value="A">A</option><option value="B">B</option><option value="C">C</option>
-            <option value="D">D</option><option value="U">U</option>
-          </select>
-        </div>
-        <div class="f">
-          <label>Available credit line on the account ($)</label>
-          <input type="number" id="creditLine" value="0" min="0" step="100">
-          <div class="dp-h">From the customer screen in Infinity. Needed to check the native Credit Line rule (C992).</div>
-        </div>
+        <label class="mini">Credit line available on the account <span class="hint">from the customer screen</span></label>
+        <input type="number" id="creditLine" class="mid-in" value="" placeholder="$0 if none" min="0" step="100" oninput="live()">
+        <label class="mini">Account score <span class="hint">only if you can see it</span></label>
+        <div class="chips" id="score-chips"></div>
+        <input type="hidden" id="scoreOverride" value="">
       </div>
 
-      <div class="f">
-        <label>Down Payment Customer Has ($)</label>
-        <div class="sl-wrap">
-          <span class="sl-num" id="dpv">$300</span>
-          <input type="range" id="dpsl" min="0" max="3000" value="300" step="25" oninput="syncDP()">
-          <div class="sl-labs"><span>$0</span><span>$500</span><span>$1K</span><span>$2K</span><span>$3K+</span></div>
-        </div>
-        <div class="dp-h" id="dph">Adjust slider or enter below</div>
-        <input type="number" id="dpman" placeholder="Type exact amount" min="0" step="25" style="margin-top:7px" oninput="manDP()">
-      </div>
+      <div class="step"><span class="stn">3</span> Down payment <span class="hint">optional — leave empty to see what is needed</span></div>
+      <div class="chips" id="dp-chips"></div>
+      <input type="number" id="dpman" class="mid-in" placeholder="Custom amount" min="0" step="25" oninput="manDP()">
+      <input type="hidden" id="dpsl" value="0">
+      <div class="dp-h" id="dph"></div>
 
-      <button class="cta" onclick="calculate()">⚡ Check options</button>
-      <div class="dp-h" style="text-align:center;margin-top:8px">Assumes a normal credit file (3+ open accounts, no judgments). Open <strong>More details</strong> only if you know otherwise.</div>
       <details class="more"><summary>More details (optional)</summary>
 
       <div id="new-fields">
         <div class="f">
           <label>Open trade lines on credit report (leave blank unless you know it)</label>
-          <input type="number" id="openAccts" value="" placeholder="Auto — estimated from FICO" min="0" max="30" step="1">
+          <input type="number" id="openAccts" value="" placeholder="Auto — estimated from FICO" min="0" max="30" step="1" oninput="live()">
           <div class="dp-h">Infinity score: A needs FICO 625+ and 3+ open &middot; B needs 600+ and 2+ &middot; C needs 531+ and 2+</div>
         </div>
         <div class="f">
@@ -392,7 +372,7 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
 
       <div class="f">
         <label>Loyalty / Tenure at Daniels</label>
-        <select id="tenure">
+        <select id="tenure" onchange="live()">
           <option value="0">New — 0 to 5 months</option>
           <option value="9">6 to 11 months</option>
           <option value="18" selected>12 to 23 months</option>
@@ -402,7 +382,7 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
 
       <div class="f">
         <label>Employment Type</label>
-        <select id="emptype" onchange="updateEdge()">
+        <select id="emptype" onchange="live()">
           <option value="employed">W2 Employed</option>
           <option value="selfemployed">Self-Employed / 1099</option>
           <option value="retired">Retired / SSI / Benefits</option>
@@ -411,7 +391,7 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
       </div>
 
       <div class="f">
-        <label>Income Verified? <span class="req">*</span></label>
+        <label>Income Verified?</label>
         <div class="tg-row">
           <button class="tg yes" id="vy" onclick="tog('ver',true)">✓ Pay stub / W2</button>
           <button class="tg" id="vn" onclick="tog('ver',false)">✗ Self-declared</button>
@@ -420,17 +400,13 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
 
       <div class="f">
         <label>Tax Rate (%)</label>
-        <input type="number" id="tax" value="8.0" min="0" max="15" step="0.25" oninput="updDP()">
+        <input type="number" id="tax" value="8.0" min="0" max="15" step="0.25" oninput="live()">
       </div>
 
       <div class="f">
         <label>Requested Term (months)</label>
-        <div class="sl-wrap">
-          <span class="sl-num" id="tv">18 mo</span>
-          <input type="range" id="term" min="1" max="36" value="18" step="1" oninput="syncTerm()">
-          <div class="sl-labs"><span>1</span><span>6</span><span>12</span><span>18</span><span>24</span><span>30</span><span>36</span></div>
-        </div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px" id="term-chips">
+        <input type="hidden" id="term" value="18"><span id="tv" style="display:none">18 mo</span>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:2px" id="term-chips">
           <button class="term-chip" onclick="setTerm(3)">3 mo</button>
           <button class="term-chip" onclick="setTerm(6)">6 mo</button>
           <button class="term-chip" onclick="setTerm(9)">9 mo</button>
@@ -440,16 +416,8 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
           <button class="term-chip" onclick="setTerm(21)">21 mo</button>
           <button class="term-chip" onclick="setTerm(24)">24 mo</button>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-          <span style="font-size:11px;color:var(--sub);white-space:nowrap;font-weight:600">Custom:</span>
-          <input type="number" id="term-manual" placeholder="e.g. 10" min="1" max="60" step="1"
-            style="width:90px;height:36px;border:1.5px solid var(--border);border-radius:7px;padding:0 10px;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;color:var(--navy);background:var(--off);outline:none"
-            oninput="setTermManual()" onfocus="this.style.borderColor='var(--steel)'" onblur="this.style.borderColor='var(--border)'">
-          <span style="font-size:11px;color:var(--sub)">months (1–60)</span>
-        </div>
+        <input type="hidden" id="term-manual" value="">
       </div>
-
-      <div class="sec">Risk Flags &amp; Exclusions</div>
 
       <div class="f">
         <label>Prior Daniels charge-off / default?</label>
@@ -461,14 +429,14 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
 
       <div class="f">
         <label>Check any that apply (Infinity exclusions)</label>
-        <label class="ck"><input type="checkbox" id="x_delinq10"> Currently more than 10 days delinquent at Daniels</label>
-        <label class="ck"><input type="checkbox" id="x_unpaid"> Unpaid returned check, NSF fee or late charge</label>
-        <label class="ck"><input type="checkbox" id="x_cosigner"> Customer needs a co-signer</label>
-        <label class="ck"><input type="checkbox" id="x_late30"> 30-day late on credit report in last 12 months</label>
+        <label class="ck"><input type="checkbox" id="x_delinq10" onchange="live()"> Currently more than 10 days delinquent at Daniels</label>
+        <label class="ck"><input type="checkbox" id="x_unpaid" onchange="live()"> Unpaid returned check, NSF fee or late charge</label>
+        <label class="ck"><input type="checkbox" id="x_cosigner" onchange="live()"> Customer needs a co-signer</label>
+        <label class="ck"><input type="checkbox" id="x_late30" onchange="live()"> 30-day late on credit report in last 12 months</label>
       </div>
 
       </details>
-      <button class="rst" onclick="resetAll()">Reset form</button>
+      <button class="rst" onclick="resetAll()">Clear — next customer</button>
     </div>
   </div>
 
@@ -477,13 +445,13 @@ details.how{border:1.5px solid var(--border);border-radius:12px;background:#fff}
     <div class="panel">
       <div class="idle">
         <div class="idle-ico">🏠</div>
-        <div class="idle-t">Ready to evaluate</div>
-        <div class="idle-s">Enter customer details on the left and press <strong>Run Pre-Screen</strong>.</div>
+        <div class="idle-t">Fill in the 3 steps</div>
+        <div class="idle-s">Purchase and FICO are enough. The result shows up here on its own.</div>
       </div>
     </div>
   </div>
 
-  <div class="foot">Daniels Home Center · Credit Pre-Screen Tool v4.0 · Mirrors Infinity X090 as configured Nov 5, 2026 · Estimate only — not an approval · Internal use only</div>
+  <div class="foot">Daniels Home Center · Credit Pre-Screen v4.2 · Mirrors Infinity X090 as configured Nov 5, 2026 · Estimate only — not an approval · Internal use only</div>
 </div>
 
 <script>
@@ -519,7 +487,8 @@ async function calculate() {
   const purchase   = items.reduce((s,it)=>s+it.amount, 0);
   const tax        = parseFloat(document.getElementById('tax').value)||0;
   const tenure     = parseInt(document.getElementById('tenure').value);
-  const dpInput    = parseFloat(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0;
+  const dpInput    = parseFloat(document.getElementById('dpman').value)||0;
+  window.__dpBlank = document.getElementById('dpman').value==='';
   const termReq    = getTermValue();
   const emptype    = document.getElementById('emptype').value;
   const verified   = ST.ver;
@@ -532,11 +501,8 @@ async function calculate() {
   const creditLine = parseFloat(document.getElementById('creditLine').value)||0;
   const ck = function(id){ return document.getElementById(id).checked; };
 
-  if (items.length === 0) {
-    const earlyRcol = document.getElementById('rcol');
-    if (earlyRcol) earlyRcol.innerHTML = '<div style="padding:24px;border:1px solid #e0b4b4;background:#fff0f0;border-radius:8px;color:#8a1f1f;font-family:Arial,sans-serif;"><strong>Add at least one department.</strong><br>Pick a department and enter an amount before running the pre-screen.</div>';
-    return;
-  }
+  if (items.length === 0 || !(fico>=300 && fico<=850)) { reqSeq++; if(!window.__last) idleResult(); return; }
+  const mySeq = ++reqSeq;
 
   // Single-product field kept for backward compatibility with older Edge
   // Function versions: send the LARGEST line item as a fallback 'product'.
@@ -555,7 +521,8 @@ async function calculate() {
   let result;
   const rcolEl = document.getElementById('rcol');
   if (rcolEl) {
-    rcolEl.innerHTML = '<div class="panel"><div class="idle"><div class="idle-ico">⏳</div><div class="idle-t">Running pre-screen…</div><div class="idle-s">Checking the most likely financing path.</div></div></div>';
+    if (window.__last) { rcolEl.style.opacity='.55'; }
+    else rcolEl.innerHTML = '<div class="panel"><div class="idle"><div class="idle-ico">⏳</div><div class="idle-t">Checking…</div></div></div>';
   }
   try {
     const resp = await fetch('https://ecfxeebhtgkbsdeuiueb.supabase.co/functions/v1/credit-prescreen-v4', {
@@ -574,7 +541,9 @@ async function calculate() {
     }
     result = await resp.json();
     if (result.error) throw new Error(result.error);
+    if (mySeq !== reqSeq) return;   // a newer entry superseded this one
   } catch (err) {
+    if (rcolEl) rcolEl.style.opacity='';
     console.error('Pre-screen service error:', err);
     const msg = '<div style="padding:24px;border:1px solid #e0b4b4;background:#fff0f0;border-radius:8px;color:#8a1f1f;font-family:Arial,sans-serif;">' +
         '<strong>Unable to reach the credit pre-screen service.</strong><br>' +
@@ -591,6 +560,7 @@ async function calculate() {
 
   window.__last = result;
   window.__thin = null;
+  window.__line = creditLine;
   if (custType==='new' && isNaN(openTyped) && result.infinityScore && result.infinityScore!=='D' && !(result.steps||[]).some(function(x){return x.n==='Hard Stops'&&x.s==='fail';})) {
     try {
       const r2 = await fetch('https://ecfxeebhtgkbsdeuiueb.supabase.co/functions/v1/credit-prescreen-v4', {
@@ -600,12 +570,15 @@ async function calculate() {
       });
       if (r2.ok) {
         const t = await r2.json();
+        if (mySeq !== reqSeq) return;
         const a = result.policyOffer, b = t.policyOffer;
         const same = (!a && !b) || (a && b && a.dp===b.dp && a.term===b.term);
         if (!same) window.__thin = {offer:b, score:t.infinityScore};
       }
     } catch(e) { /* thin-file note is optional */ }
   }
+  if (mySeq !== reqSeq) return;
+  if (rcolEl) rcolEl.style.opacity='';
   render(
     result.decision, result.cls, result.steps, result.tier, result.infinityScore,
     result.dp, result.dpPct, result.term, result.pmt, result.limit, result.apr,
@@ -1140,7 +1113,7 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
   const mH=tier?`<div class="mg ani3"><div class="mc hl"><div class="mc-lbl">Required DP</div><div class="mc-val">$${(reqDP||dp||0).toLocaleString()}</div><div class="mc-sub">${Math.round(dpPct||0)}% of sale</div></div><div class="mc"><div class="mc-lbl">Monthly Payment</div><div class="mc-val">$${pmt>0?pmt.toLocaleString():'—'}</div><div class="mc-sub">${term}mo · APR ${apr||'—'}%</div></div><div class="mc"><div class="mc-lbl">Infinity Score</div><div class="mc-val">${score||'—'}</div><div class="mc-sub">Rule ${(R.policyOffer&&R.policyOffer.rule)||'—'}${limit?' · cap $'+Math.round(limit).toLocaleString():''}</div></div></div><div class="mg2 ani4"><div class="mc"><div class="mc-lbl">Amount Financed</div><div class="mc-val">$${Math.round(financed||0).toLocaleString()}</div><div class="mc-sub">Sale $${Math.round(sale).toLocaleString()} − DP $${(reqDP||dp||0).toLocaleString()}</div></div><div class="mc"><div class="mc-lbl">Infinity may show</div><div class="mc-val" style="font-size:16px">${R.infinityBestOffer?R.infinityBestOffer.rule+' · $'+R.infinityBestOffer.dp+' down':'No offer'}</div><div class="mc-sub">Best Offer (estimated) — collect the policy DP</div></div></div>` : '';
 
   // shortfall
-  const sfH=dpShort>0&&tier?`<div class="sf ani4"><div style="font-size:22px">💰</div><div><div class="sf-t">Down Payment Shortfall</div><div class="sf-b">Customer needs <strong>$${dpShort.toLocaleString()} more</strong> — total $${(reqDP||dp||0).toLocaleString()} required.</div><div class="sf-n">Say: "We need $${(reqDP||dp||0).toLocaleString()} down today. Can you do that?"</div></div></div>`:'';
+  const sfH=dpShort>0&&tier&&!window.__dpBlank?`<div class="sf ani4"><div style="font-size:22px">💰</div><div><div class="sf-t">Down Payment Shortfall</div><div class="sf-b">Customer needs <strong>$${dpShort.toLocaleString()} more</strong> — total $${(reqDP||dp||0).toLocaleString()} required.</div><div class="sf-n">Say: "We need $${(reqDP||dp||0).toLocaleString()} down today. Can you do that?"</div></div></div>`:'';
 
   // sales script
   const scH=script?`<div class="script-card ani4"><div class="script-hdr ${cls}"><span>💬</span><h3>Conversation Guide</h3></div><div class="script-body"><div class="script-quote ${cls}">${script.quote}</div><div class="script-steps">${(script.steps||[]).map(s=>`<div class="script-step"><div class="sc-dot">${s.n}</div><div class="sc-txt"><strong>${s.t}</strong><br>${s.d}</div></div>`).join('')}</div></div></div>`:'';
@@ -1158,11 +1131,14 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
 
   const P=R.policyOffer, usd=n=>'$'+Math.round(n||0).toLocaleString();
   const head={approved:'Looks good — likely approved in-house',adjust:'Likely approved in-house',split:'Part in-house, part with a partner',external:'Likely a partner program',declined:'Not a fit for financing right now'}[cls]||decision;
-  const ep=(parseInt(document.getElementById('ficoNum').value)||parseInt(document.getElementById('fico').value))<600?'SNAP / Koalafi':'Synchrony / WF';
+  const ep=(parseInt(document.getElementById('ficoNum').value)||parseInt(document.getElementById('fico').value)||0)<600?'SNAP / Koalafi':'Synchrony / WF';
   let big='';
   if(P&&(cls==='approved'||cls==='adjust')){
-    big=`<div class="hero-nums"><div><small>Down today</small><b>${usd(P.dp)}</b></div><div><small>Monthly</small><b>${usd(P.pmt)}</b></div><div><small>Term</small><b>${P.term} mo</b></div></div>`+
-        (dpShort>0?`<div class="hero-note warn">Customer needs <strong>${usd(dpShort)} more</strong> down to get there.</div>`:`<div class="hero-note ok">The down payment on hand covers it.</div>`);
+    const po=(R.offers||[]).find(o=>o.rule===P.rule)||{}; const lineAmt=po.cap||window.__line||0;
+    const alts=(R.offers||[]).filter(o=>o.eligible&&o.policyOK&&o.rule!==P.rule&&o.term>P.term).sort((a,b)=>a.dp-b.dp||b.term-a.term).slice(0,2);
+    const altH=alts.length?`<div class="alts"><b>Other options</b>${alts.map(o=>`<div>${o.term} mo · ${usd(o.dp)} down · ~${usd(o.pmt)}/mo <span>${o.rule}</span></div>`).join('')}</div>`:'';
+    big=`<div class="hero-nums"><div><small>${window.__dpBlank?'Down needed':'Down today'}</small><b>${usd(P.dp)}</b></div><div><small>Monthly</small><b>${usd(P.pmt)}</b></div><div><small>Term</small><b>${P.term} mo</b></div>${lineAmt?`<div><small>Credit line up to</small><b>${usd(lineAmt)}</b></div>`:''}</div>`+
+        (window.__dpBlank?'':(dpShort>0?`<div class="hero-note warn">Customer needs <strong>${usd(dpShort)} more</strong> down to get there.</div>`:`<div class="hero-note ok">The down payment on hand covers it.</div>`))+altH;
   } else if(cls==='split'&&split){
     big=`<div class="hero-nums"><div><small>In-house</small><b>${usd(split.danielsAmt)}</b></div><div><small>${split.partner}</small><b>${usd(split.extAmt)}</b></div></div>`;
   } else if(cls==='external'||cls==='declined'){
@@ -1175,168 +1151,142 @@ function render(decision,cls,steps,tier,score,dp,dpPct,term,pmt,limit,apr,sale,d
 }
 
 // ════════════════════════════════════════════════════════════
-// UI HELPERS
+// UI HELPERS — counter-friendly flow: purchase → customer → down payment
 // ════════════════════════════════════════════════════════════
-function ficoTyped(){
-  const v=parseInt(document.getElementById('ficoNum').value);
-  if(v>=300&&v<=850){const sl=document.getElementById('fico');sl.value=Math.max(400,v);sf();}
+const DEPT_LABELS = {
+  furniture:'Furniture', mattress:'Mattress', appliances:'Appliances',
+  electronics:'Electronics / TV', seasonal:'Seasonal (A/C, heater)', iphone:'iPhone / Apple', accessories:'Accessories'
+};
+const CART = { furniture:'' };            // selected categories → amount typed
+const FICO_RANGES = [['Under 530',500],['530–549',530],['550–599',550],['600–639',600],['640–659',640],['660–699',660],['700+',700]];
+const DP_QUICK = [['Not sure',''],['$100',100],['$200',200],['$300',300],['$500',500],['$1,000',1000]];
+const SCORE_QUICK = [['Not sure',''],['A','A'],['B','B'],['C','C'],['D','D'],['U','U']];
+let liveTimer=null, reqSeq=0;
+
+function live(){ clearTimeout(liveTimer); liveTimer=setTimeout(calculate,350); }
+function chipHtml(label, on, fn, arg){ return `<button type="button" class="chip-b${on?' on':''}" onclick="${fn}(${JSON.stringify(arg).replace(/"/g,'&quot;')})">${label}</button>`; }
+
+// ── Step 1: purchase ─────────────────────────────────────────────────────────
+function renderCats(){
+  document.getElementById('cat-chips').innerHTML = Object.entries(DEPT_LABELS).map(([k,l])=>chipHtml(l, k in CART, 'toggleCat', k)).join('');
+  const ks = Object.keys(CART);
+  document.getElementById('cart-rows').innerHTML = ks.map(k=>
+    `<div class="cart-row"><span>${DEPT_LABELS[k]}</span><div class="money"><i>$</i><input type="number" id="cart_${k}" min="0" step="50" placeholder="0" value="${CART[k]}" oninput="cartInput('${k}',this.value)"></div></div>`).join('');
 }
-function sf(){
-  const v=parseInt(document.getElementById('fico').value);
-  const fn=document.getElementById('ficoNum'); if(fn && document.activeElement!==fn) fn.value=v;
-  const el=document.getElementById('fv');
-  el.textContent=v;
-  el.className='sl-num '+(v<550?'danger':v<600?'warn':v<650?'':v>=650?'good':'');
+function toggleCat(k){
+  if(k in CART){ if(Object.keys(CART).length>1) delete CART[k]; } else { CART[k]=''; }
+  renderCats(); syncCart();
+  const el=document.getElementById('cart_'+k); if(el && !el.value) el.focus();
 }
-function syncDP(){
-  const v=parseInt(document.getElementById('dpsl').value);
-  document.getElementById('dpv').textContent='$'+v.toLocaleString();
-  document.getElementById('dpman').value=v;
-  hDP(v);
+function cartInput(k,v){ CART[k]=v; syncCart(); }
+function getDeptItems(){
+  return Object.entries(CART).map(([product,v])=>({product, amount:parseFloat(v)||0})).filter(it=>it.amount>0);
 }
-function manDP(){
-  const v=parseInt(document.getElementById('dpman').value)||0;
-  document.getElementById('dpsl').value=Math.min(v,parseInt(document.getElementById('dpsl').max));
-  document.getElementById('dpv').textContent='$'+v.toLocaleString();
-  hDP(v);
-}
-function hDP(v){
-  const sale=getSale(); const pct=sale>0?((v/sale)*100).toFixed(0):0;
-  const el=document.getElementById('dph');
-  const hasIphone = getDeptItems().some(it => it.product === 'iphone');
-  if(hasIphone){el.style.color='var(--red)';el.textContent='⚠ iPhone in cart: 25% minimum required on that portion';return;}
-  el.style.color='var(--steel)'; el.textContent=pct+'% of total sale price';
-}
-function syncTerm(){
-  const v=parseInt(document.getElementById('term').value);
-  document.getElementById('tv').textContent=v+' mo';
-  document.getElementById('term-manual').value='';
-  highlightTermChip(v);
-}
-function setTerm(v){
-  v=Math.max(1,Math.min(60,v));
-  document.getElementById('term').value=Math.min(v,36); // slider caps at 36
-  document.getElementById('tv').textContent=v+' mo';
-  document.getElementById('term-manual').value= v>36 ? v : '';
-  highlightTermChip(v);
-}
-function setTermManual(){
-  const raw=document.getElementById('term-manual').value;
-  if(!raw||raw===''){return;}
-  const v=Math.max(1,Math.min(60,parseInt(raw)||1));
-  document.getElementById('term').value=Math.min(v,36);
-  document.getElementById('tv').textContent=v+' mo';
-  highlightTermChip(v);
-}
-function getTermValue(){
-  // manual field takes priority if filled
-  const man=parseInt(document.getElementById('term-manual').value);
-  if(man&&man>0) return Math.min(60,man);
-  return parseInt(document.getElementById('term').value);
-}
-function highlightTermChip(v){
-  document.querySelectorAll('.term-chip').forEach(c=>c.classList.remove('active'));
-  const std=[3,6,9,12,15,18,21,24];
-  const idx=std.indexOf(v);
-  if(idx>=0) document.querySelectorAll('.term-chip')[idx].classList.add('active');
-}
-function updDP(){
-  const sale=getSale(); const m=Math.max(3000,Math.round(sale));
-  document.getElementById('dpsl').max=m;
-  hDP(parseInt(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0);
+function syncCart(){
+  const items=getDeptItems(), total=items.reduce((a,it)=>a+it.amount,0);
+  document.getElementById('purchase').value=total;
+  document.getElementById('dept-total-disp').textContent='$'+total.toLocaleString();
+  if(items.length) document.getElementById('product').value=items.slice().sort((a,b)=>b.amount-a.amount)[0].product;
+  hDP(parseFloat(document.getElementById('dpman').value)||0);
+  live();
 }
 function getSale(){
   const p=parseFloat(document.getElementById('purchase').value)||0;
   const t=parseFloat(document.getElementById('tax').value)||0;
   return p*(1+t/100);
 }
-const DEPT_LABELS = {
-  furniture:'Furniture', mattress:'Mattress', accessories:'Accessories',
-  appliances:'Appliances', electronics:'Electronics / TV / Laptop',
-  seasonal:'Seasonal (A/C, Heater)', iphone:'iPhone / Apple Device'
-};
-let deptRowSeq = 0;
 
-function deptRowHtml(id, selected, amount){
-  const opts = Object.entries(DEPT_LABELS).map(([v,l]) =>
-    `<option value="${v}"${v===selected?' selected':''}>${l}</option>`).join('');
-  return `<div class="dept-row" data-row-id="${id}">
-    <select onchange="onDeptChange()">${opts}</select>
-    <input type="number" min="0" step="50" value="${amount}" oninput="onDeptChange()">
-    <button type="button" class="dept-rm" onclick="removeDeptRow(${id})" title="Remove">✕</button>
-  </div>`;
+// ── Step 2: customer ─────────────────────────────────────────────────────────
+function renderFicoChips(active){
+  document.getElementById('fico-chips').innerHTML = FICO_RANGES.map(r=>chipHtml(r[0], active===r[1], 'pickFico', r[1])).join('');
 }
-
-function addDeptRow(selected, amount){
-  deptRowSeq++;
-  const container = document.getElementById('dept-rows');
-  container.insertAdjacentHTML('beforeend', deptRowHtml(deptRowSeq, selected||'furniture', amount!=null?amount:0));
-  onDeptChange();
+function ficoRangeOf(v){ let a=null; FICO_RANGES.forEach(r=>{ if(v>=r[1]) a=r[1]; }); return a; }
+function pickFico(v){
+  document.getElementById('ficoNum').value=v;
+  document.getElementById('fico').value=v;
+  renderFicoChips(v);
+  document.getElementById('fico-note').textContent='Using '+v+' — the low end of the range. Type the exact score for a sharper answer.';
+  live();
 }
-
-function removeDeptRow(id){
-  const row = document.querySelector(`.dept-row[data-row-id="${id}"]`);
-  if (row) row.remove();
-  // Always keep at least one row so the form never has zero departments
-  if (document.querySelectorAll('.dept-row').length === 0) addDeptRow('furniture', 1800);
-  else onDeptChange();
+function ficoTyped(){
+  const v=parseInt(document.getElementById('ficoNum').value);
+  document.getElementById('fico').value=(v>=300&&v<=850)?v:0;
+  document.getElementById('fico-note').textContent='';
+  renderFicoChips((v>=300&&v<=850)?ficoRangeOf(v):null);
+  live();
 }
-
-function getDeptItems(){
-  const rows = document.querySelectorAll('.dept-row');
-  const items = [];
-  rows.forEach(row => {
-    const product = row.querySelector('select').value;
-    const amount = parseFloat(row.querySelector('input[type=number]').value) || 0;
-    if (amount > 0) items.push({ product, amount });
-  });
-  return items;
+function renderScoreChips(){
+  const cur=document.getElementById('scoreOverride').value;
+  document.getElementById('score-chips').innerHTML = SCORE_QUICK.map(r=>chipHtml(r[0], cur===r[1], 'pickScore', r[1])).join('');
 }
-
-function onDeptChange(){
-  const items = getDeptItems();
-  const total = items.reduce((s,it)=>s+it.amount, 0);
-  document.getElementById('purchase').value = total;
-  document.getElementById('dept-total-disp').textContent = '$' + total.toLocaleString();
-  // keep the hidden 'product' field as the largest line item, for any legacy display logic
-  if (items.length > 0) {
-    const biggest = items.slice().sort((a,b)=>b.amount-a.amount)[0].product;
-    document.getElementById('product').value = biggest;
-  }
-  updDP();
-}
-
-function onProd(){hDP(parseInt(document.getElementById('dpman').value)||parseInt(document.getElementById('dpsl').value)||0);}
-function updateEdge(){}
-function tog(k,v){
-  ST[k]=v;
-  const m={ver:['vy','vn','yes',''],def:['dy','dn','no','yes'],derog:['gy','gn','no','yes']};
-  const[yi,ni,yc,nc]=m[k];
-  document.getElementById(yi).className='tg '+(v?yc:'');
-  document.getElementById(ni).className='tg '+(!v?nc:'');
-}
+function pickScore(v){ document.getElementById('scoreOverride').value=v; renderScoreChips(); live(); }
 function setCust(v){
   ST.cust=v;
   document.getElementById('cn').className='tg '+(v==='new'?'yes':'');
   document.getElementById('ce').className='tg '+(v==='existing'?'yes':'');
   document.getElementById('new-fields').style.display=v==='new'?'':'none';
   document.getElementById('existing-fields').style.display=v==='existing'?'':'none';
-}
-function resetAll(){
-  document.getElementById('fico').value=640;document.getElementById('fv').textContent='640';document.getElementById('fv').className='sl-num';
-  document.getElementById('purchase').value=1800;document.getElementById('tax').value=8.0;
-  document.getElementById('dpsl').value=300;document.getElementById('dpman').value='';document.getElementById('dpv').textContent='$300';
-  document.getElementById('dph').textContent='Adjust slider or enter below';document.getElementById('dph').style.color='var(--steel)';
-  document.getElementById('term').value=18;document.getElementById('tv').textContent='18 mo';document.getElementById('term-manual').value='';highlightTermChip(18);
-  document.getElementById('dept-rows').innerHTML='';addDeptRow('furniture',1800);document.getElementById('tenure').value='18';
-  document.getElementById('openAccts').value='';document.getElementById('creditLine').value=0;document.getElementById('scoreOverride').value='';['x_delinq10','x_unpaid','x_cosigner','x_late30'].forEach(function(i){document.getElementById(i).checked=false;});setCust('new');
-  document.getElementById('emptype').value='employed';
-  tog('ver',true);tog('def',false);tog('derog',false);
-  document.getElementById('rcol').innerHTML='<div class="panel"><div class="idle"><div class="idle-ico">🏠</div><div class="idle-t">Ready to evaluate</div><div class="idle-s">Enter customer details on the left and press <strong>Run Pre-Screen</strong>.</div></div></div>';
+  live();
 }
 
-// ── INITIALIZE: seed the department list with one starting row ──────────────
-addDeptRow('furniture', 1800);
+// ── Step 3: down payment ─────────────────────────────────────────────────────
+function renderDpChips(){
+  const cur=document.getElementById('dpman').value;
+  document.getElementById('dp-chips').innerHTML = DP_QUICK.map(r=>chipHtml(r[0], String(cur)===String(r[1]), 'pickDP', r[1])).join('');
+}
+function pickDP(v){ document.getElementById('dpman').value=v; renderDpChips(); hDP(parseFloat(v)||0); live(); }
+function manDP(){ renderDpChips(); hDP(parseFloat(document.getElementById('dpman').value)||0); live(); }
+function hDP(v){
+  const sale=getSale(), el=document.getElementById('dph');
+  const hasIphone=getDeptItems().some(it=>it.product==='iphone');
+  if(hasIphone){ el.style.color='var(--red)'; el.textContent='⚠ iPhone in cart: 25% minimum required on that portion'; return; }
+  el.style.color='var(--steel)';
+  el.textContent=(v>0&&sale>0)?(Math.round(v/sale*100)+'% of the total with tax'):'';
+}
+
+// ── Term + toggles (More details) ────────────────────────────────────────────
+function setTerm(v){
+  document.getElementById('term').value=v;
+  document.getElementById('tv').textContent=v+' mo';
+  document.querySelectorAll('.term-chip').forEach(c=>c.classList.toggle('active',c.textContent.trim()===v+' mo'));
+  live();
+}
+function getTermValue(){ return parseInt(document.getElementById('term').value)||18; }
+function tog(k,v){
+  ST[k]=v;
+  const m={ver:['vy','vn','yes',''],def:['dy','dn','no','yes'],derog:['gy','gn','no','yes']};
+  const[yi,ni,yc,nc]=m[k];
+  document.getElementById(yi).className='tg '+(v?yc:'');
+  document.getElementById(ni).className='tg '+(!v?nc:'');
+  live();
+}
+
+function resetAll(){
+  for(const k of Object.keys(CART)) delete CART[k];
+  CART.furniture='';
+  renderCats(); syncCart0();
+  document.getElementById('ficoNum').value=''; document.getElementById('fico').value=0; renderFicoChips(null); document.getElementById('fico-note').textContent='';
+  document.getElementById('dpman').value=''; renderDpChips(); hDP(0);
+  document.getElementById('creditLine').value=''; document.getElementById('scoreOverride').value=''; renderScoreChips();
+  document.getElementById('openAccts').value=''; document.getElementById('tax').value=8.0; document.getElementById('tenure').value='18';
+  document.getElementById('emptype').value='employed'; setTerm0(18);
+  ['x_delinq10','x_unpaid','x_cosigner','x_late30'].forEach(i=>{document.getElementById(i).checked=false;});
+  tog0('ver',true); tog0('def',false); tog0('derog',false); setCust0('new');
+  window.__last=null; window.__thin=null; reqSeq++;
+  idleResult();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+// silent variants (no live recalculation during reset)
+function syncCart0(){ document.getElementById('purchase').value=0; document.getElementById('dept-total-disp').textContent='$0'; }
+function setTerm0(v){ document.getElementById('term').value=v; document.querySelectorAll('.term-chip').forEach(c=>c.classList.toggle('active',c.textContent.trim()===v+' mo')); }
+function tog0(k,v){ const o=live; live=function(){}; tog(k,v); live=o; }
+function setCust0(v){ const o=live; live=function(){}; setCust(v); live=o; }
+function idleResult(){
+  document.getElementById('rcol').innerHTML='<div class="panel"><div class="idle"><div class="idle-ico">🏠</div><div class="idle-t">Fill in the 3 steps</div><div class="idle-s">Purchase and FICO are enough. The result shows up here on its own.</div></div></div>';
+}
+
+// ── INITIALIZE ───────────────────────────────────────────────────────────────
+renderCats(); renderFicoChips(null); renderScoreChips(); renderDpChips();
 </script>
 </body>
 </html>
