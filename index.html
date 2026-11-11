@@ -597,6 +597,7 @@ async function calculate() {
   const tenure     = parseInt(document.getElementById('tenure').value);
   const dpInput    = parseFloat(document.getElementById('dpman').value)||0;
   window.__dpBlank = document.getElementById('dpman').value==='';
+  if(window.__noScore){ if(purchase>0) renderNoScore(purchase); else idleResult(); return; }
   const termReq    = getTermValue();
   const emptype    = document.getElementById('emptype').value;
   const verified   = ST.ver;
@@ -1321,17 +1322,35 @@ function getSale(){
 
 // ── Step 2: customer ─────────────────────────────────────────────────────────
 function renderFicoChips(active){
-  document.getElementById('fico-chips').innerHTML = FICO_RANGES.map(r=>chipHtml(tr(r[0]), active===r[1], 'pickFico', r[1])).join('');
+  document.getElementById('fico-chips').innerHTML = FICO_RANGES.map(r=>chipHtml(tr(r[0]), !window.__noScore&&active===r[1], 'pickFico', r[1])).join('') + chipHtml(L('No score / new file','Sin score / archivo nuevo'), !!window.__noScore, 'pickNoScore', true);
 }
 function ficoRangeOf(v){ let a=null; FICO_RANGES.forEach(r=>{ if(v>=r[1]) a=r[1]; }); return a; }
 function pickFico(v){
+  window.__noScore=false;
   document.getElementById('ficoNum').value=v;
   document.getElementById('fico').value=v;
   renderFicoChips(v);
   document.getElementById('fico-note').textContent=L('Using '+v+' — the low end of the range. Type the exact score for a sharper answer.','Usando '+v+' — el extremo bajo del rango. Escribe el puntaje exacto para más precisión.');
   live();
 }
+function pickNoScore(){
+  window.__noScore=true;
+  document.getElementById('ficoNum').value=''; document.getElementById('fico').value=0;
+  renderFicoChips(null);
+  document.getElementById('fico-note').textContent=L('No credit score on file. Infinity cannot be simulated.','No hay score en el archivo. Infinity no se puede simular.');
+  live();
+}
+function renderNoScore(purchase){
+  const usd=n=>'$'+Math.round(n||0).toLocaleString();
+  const head=L('Manual approval, no estimate','Aprobación manual, sin estimado');
+  document.getElementById('rcol').innerHTML=`<div class="db split ani"><div class="db-lbl">${L('Pre-Screen Result','Resultado de la pre-evaluación')}</div><div class="db-main">${head}</div>
+    <div class="hero-note warn">${L('With no score, Infinity gives no automatic offer and an approver decides. Expect a <strong>high down payment</strong> (some files have been asked for about half). The simulator will not guess a number.','Sin score, Infinity no da oferta automática y decide un aprobador. Espera un <strong>enganche alto</strong> (en algunos archivos han pedido cerca de la mitad). El simulador no va a inventar un número.')}</div>
+    <div class="hero-note">${L('Tell the customer: it needs a manager review, no promises yet. Purchase entered: ','Dile al cliente: requiere revisión de gerencia, sin promesas todavía. Compra capturada: ')}<strong>${usd(purchase)}</strong>. ${L('Backup option: SNAP / Koalafi.','Plan B: SNAP / Koalafi.')}</div>
+    <div class="hero-fine">${L('Estimate only — it does not pull credit. Final approval happens in Infinity.','Solo un estimado — no consulta el crédito. La aprobación final se hace en Infinity.')}</div></div>`;
+  const b=document.getElementById('bar'); if(b){document.getElementById('bar-l').textContent=L('Result','Resultado');document.getElementById('bar-t').textContent=head;b.classList.add('show');}
+}
 function ficoTyped(){
+  window.__noScore=false;
   const v=parseInt(document.getElementById('ficoNum').value);
   document.getElementById('fico').value=(v>=300&&v<=850)?v:0;
   document.getElementById('fico-note').textContent='';
@@ -1405,7 +1424,7 @@ function resetAll(){
   for(const k of Object.keys(CART)) delete CART[k];
   CART.furniture='';
   renderCats(); syncCart0();
-  document.getElementById('ficoNum').value=''; document.getElementById('fico').value=0; renderFicoChips(null); document.getElementById('fico-note').textContent='';
+  window.__noScore=false; document.getElementById('ficoNum').value=''; document.getElementById('fico').value=0; renderFicoChips(null); document.getElementById('fico-note').textContent='';
   document.getElementById('dpman').value=''; renderDpChips(); hDP(0);
   document.getElementById('creditLine').value=''; document.getElementById('scoreOverride').value=''; renderScoreChips();
   document.getElementById('openAccts').value=''; document.getElementById('tax').value=8.0; document.getElementById('tenure').value='18'; renderTenure(); renderHist(); document.getElementById('st-good').classList.add('on'); document.getElementById('st-bad').classList.remove('on'); document.getElementById('issues-box').style.display='none';
