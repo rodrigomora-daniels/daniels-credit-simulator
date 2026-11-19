@@ -306,19 +306,23 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 #bar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:300;background:var(--navy);color:#fff;padding:12px 16px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,.25);align-items:center;justify-content:space-between;gap:12px;font-size:16px;font-weight:700;cursor:pointer}#bar small{font-size:11px;font-weight:600;opacity:.7;display:block}#bar .go{background:#fff;color:var(--navy);border-radius:20px;padding:10px 16px;font-size:13px}
 @media(max-width:840px){#bar.show{display:flex}body{padding-bottom:84px}}
 .top-r{display:flex;align-items:center;gap:12px}.lang{display:flex;background:rgba(255,255,255,.12);border-radius:22px;padding:3px}.lang button{min-width:52px;height:38px;border:none;border-radius:19px;background:none;color:rgba(255,255,255,.75);font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation}.lang button.on{background:#fff;color:var(--navy)}@media(max-width:560px){.top-pill{display:none}}
+.top-logo{display:inline-flex;align-items:center;flex:none}.top-logo img{height:34px;width:auto;display:block}
+.top-home{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:#D6E4F7;border:1px solid rgba(214,228,247,.65);border-radius:8px;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}.top-home:hover{background:rgba(255,255,255,.1)}.top-logo:focus-visible,.top-home:focus-visible{outline:2px solid #C8922A;outline-offset:2px}
+@media(max-width:600px){.top{padding:0 12px;gap:8px}.top-l{min-width:0;flex:1}.top-l>div{min-width:0}.top-ver,.top-pill{display:none}.top-name{display:none}.top-r{gap:8px;flex:none}.top-home{padding:0 10px}.lang button{min-width:44px}}
+@media print{.top-home{display:none}}
 </style>
 </head>
 <body>
 
 <div class="top">
   <div class="top-l">
-    <div class="top-mark">DHC</div>
+    <a class="top-logo" href="https://rodrigomora-daniels.github.io/daniels-vendor-hub/index.html" aria-label="Home / Inicio"><img src="icons/daniels-logo.png" alt="Daniel's Home Center"></a>
     <div>
-      <div class="top-name">Daniels Home Center</div>
+      <div class="top-name">Credit Pre-Screen</div>
       <div class="top-ver">Quick pre-screen v4.2 — mirrors Infinity</div>
     </div>
   </div>
-  <div class="top-r"><div class="lang"><button type="button" id="lang-en" onclick="setLang('en')">EN</button><button type="button" id="lang-es" onclick="setLang('es')">ES</button></div><div class="top-pill">Internal Use Only</div></div>
+  <div class="top-r"><a class="top-home" href="https://rodrigomora-daniels.github.io/daniels-vendor-hub/index.html">← Home</a><div class="lang"><button type="button" id="lang-en" onclick="setLang('en')">EN</button><button type="button" id="lang-es" onclick="setLang('es')">ES</button></div><div class="top-pill">Internal Use Only</div></div>
 </div>
 
 <div class="wrap">
@@ -471,8 +475,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 // LANGUAGE (EN / ES) — sales-floor toggle, remembered per tablet
 // ════════════════════════════════════════════════════════════
 let LANG='en';
-try{ LANG=localStorage.getItem('dhc_lang')||((navigator.language||'').toLowerCase().startsWith('es')?'es':'en'); }catch(e){}
+try{ LANG=localStorage.getItem('dh_lang')||localStorage.getItem('dhc_lang')||((navigator.language||'').toLowerCase().startsWith('es')?'es':'en'); }catch(e){}
 const ES={
+'Credit Pre-Screen':'Pre-evaluación de crédito','← Home':'← Inicio',
 'Quick pre-screen v4.2 — mirrors Infinity':'Pre-evaluación rápida v4.2 — refleja Infinity','Internal Use Only':'Uso interno',
 'Quick check — 3 steps':'Revisión rápida — 3 pasos','What are they buying?':'¿Qué va a comprar?','Total before tax:':'Total antes de impuesto:',
 'Who is the customer?':'¿Quién es el cliente?','New to Daniels':'Cliente nuevo','Has an account':'Ya tiene cuenta',
@@ -526,7 +531,7 @@ function applyStatic(){
   if(b&&c){ b.classList.toggle('on',LANG==='en'); c.classList.toggle('on',LANG==='es'); }
 }
 function setLang(l){
-  LANG=l; try{localStorage.setItem('dhc_lang',l);}catch(e){}
+  LANG=l; try{localStorage.setItem('dhc_lang',l);localStorage.setItem('dh_lang',l);}catch(e){}
   applyStatic(); renderCats(); renderFicoChips(parseInt(document.getElementById('fico').value)?ficoRangeOf(parseInt(document.getElementById('fico').value)):null); renderScoreChips(); renderDpChips(); renderTenure(); renderHist();
   hDP(parseFloat(document.getElementById('dpman').value)||0);
   if(window.__renderArgs) render.apply(null,window.__renderArgs); else idleResult();
